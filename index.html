@@ -33,7 +33,7 @@
     }
     .app {
       width: 100%;
-      max-width: 940px;
+      max-width: 980px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 18px;
@@ -62,20 +62,21 @@
       border-radius: 14px;
       padding: 14px;
       font-size: 14px;
-      line-height: 1.55;
+      line-height: 1.6;
       margin-bottom: 16px;
     }
     .meta {
       font-size: 12px;
       color: var(--muted);
       margin-bottom: 12px;
+      min-height: 16px;
     }
     .chat {
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 14px;
-      min-height: 380px;
-      max-height: 560px;
+      min-height: 420px;
+      max-height: 580px;
       overflow-y: auto;
       padding: 14px;
       scroll-behavior: smooth;
@@ -87,11 +88,11 @@
     .row.system { justify-content: flex-start; }
     .row.user { justify-content: flex-end; }
     .bubble {
-      max-width: 82%;
+      max-width: 84%;
       padding: 11px 13px;
       border-radius: 15px;
       font-size: 14px;
-      line-height: 1.45;
+      line-height: 1.5;
       white-space: pre-wrap;
     }
     .row.system .bubble { background: var(--system); }
@@ -135,12 +136,21 @@
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 16px;
-      line-height: 1.55;
+      line-height: 1.6;
     }
     .small-note {
       color: var(--muted);
       font-size: 12px;
       margin-top: 8px;
+    }
+    .badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef3ff;
+      color: #3556a8;
+      font-size: 12px;
     }
     code {
       background: #eef2f8;
@@ -155,17 +165,17 @@
     <div class="app">
       <div class="header">
         <h1 class="title">Smart Home Assistant Study</h1>
-        <p class="subtitle">You will experience a short sequence of everyday situations with a smart-home assistant.</p>
+        <p class="subtitle">Short interaction study on how a smart-home assistant moves from asking to suggesting to acting.</p>
       </div>
       <div class="body">
         <div id="introView">
           <div class="start-box">
             <p><strong>Instructions</strong></p>
             <p>Please imagine that you are using a smart-home assistant in your home.</p>
-            <p>The assistant supports home comfort in different situations and may gradually become more proactive over time.</p>
-            <p>In each step, choose the option that feels most natural to you.</p>
+            <p>The assistant learns from repeated choices. Sometimes it asks. Sometimes it suggests. Sometimes it acts on its own.</p>
+            <p>Your task is simply to choose the response that feels most natural to you in each situation.</p>
             <button id="startBtn" class="primary">Start interaction</button>
-            <div class="small-note">For testing only: <code>?condition=conservative</code>, <code>?condition=standard</code>, or <code>?condition=aggressive</code>.</div>
+            <div class="small-note">Testing only: <code>?condition=conservative</code>, <code>?condition=standard</code>, or <code>?condition=aggressive</code>.</div>
           </div>
         </div>
 
@@ -189,9 +199,8 @@
     };
 
     const scenarioText =
-      "Imagine that you are interacting with a smart-home assistant over the course of a normal day. " +
-      "The assistant gradually learns from repeated choices, may become more proactive over time, " +
-      "and may adapt its behaviour when the context changes.";
+      "Imagine that you interact with the same smart-home assistant across several similar situations. " +
+      "The purpose is to experience how the system behaves as it gathers evidence about your preferences and how it responds when the context changes or when you correct it.";
 
     const state = {
       condition: null,
@@ -199,7 +208,9 @@
       choices: [],
       startedAt: null,
       finishedAt: null,
-      preferredMode: null
+      preferredAction: null,
+      phaseReached: "exploration",
+      latestAutonomyLevel: "asking"
     };
 
     const introView = document.getElementById("introView");
@@ -263,7 +274,11 @@
     }
 
     function showMeta() {
-      metaEl.textContent = CONFIG.debugShowCondition ? `Assigned configuration: ${state.condition}` : "";
+      if (!CONFIG.debugShowCondition) {
+        metaEl.textContent = "";
+        return;
+      }
+      metaEl.textContent = `Assigned configuration: ${state.condition}`;
     }
 
     function finishStudy() {
@@ -271,7 +286,11 @@
       clearInput();
       const done = document.createElement("div");
       done.className = "done-box";
-      done.innerHTML = `<strong>The interaction is complete.</strong><br>Click below to continue to the questionnaire.`;
+      done.innerHTML = `
+        <strong>The interaction is complete.</strong><br>
+        <span class="badge">Highest phase reached: ${state.phaseReached}</span>
+        <div style="margin-top:8px;">Click below to continue to the questionnaire.</div>
+      `;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "primary";
@@ -285,7 +304,9 @@
     function goToQuestionnaire() {
       const url = new URL(CONFIG.tallyBaseUrl);
       url.searchParams.set("condition", state.condition);
-      url.searchParams.set("preferred_mode", state.preferredMode || "none");
+      url.searchParams.set("preferred_action", state.preferredAction || "none");
+      url.searchParams.set("phase_reached", state.phaseReached);
+      url.searchParams.set("latest_autonomy_level", state.latestAutonomyLevel);
       url.searchParams.set("choices", state.choices.join(" || "));
       url.searchParams.set("transcript", state.transcript.join("\n"));
       url.searchParams.set("started_at", state.startedAt || "");
@@ -306,41 +327,44 @@
     function introSequence() {
       addMessage("system", "Hello. I’m your smart-home assistant.");
       wait(300, () => {
-        addMessage("system", "You will now go through several short situations during the day.");
-        wait(350, () => step1());
+        addMessage("system", "You will now experience a short sequence of situations. I may begin by asking, later suggest a learned action, and later act more proactively.");
+        wait(350, () => step1Exploration());
       });
     }
 
-    function step1() {
-      addMessage("system", "Situation 1: In the afternoon, the room does not feel quite right.");
+    // STEP 1 — EXPLORATION
+    function step1Exploration() {
+      state.phaseReached = "exploration";
+      state.latestAutonomyLevel = "asking";
+      addMessage("system", "Situation 1: It is a bit uncomfortable in the room.");
       showButtons([
         {
-          label: 'You say: "The room does not feel quite right."',
-          userText: 'The room does not feel quite right.',
+          label: 'You say: "It is a bit uncomfortable in here."',
+          userText: 'It is a bit uncomfortable in here.',
           primary: true,
           onClick: () => {
             wait(300, () => {
-              addMessage("system", "I see two reasonable ways to help in this situation. I can either make an environmental adjustment or provide a more direct response. Which would you prefer?");
+              addMessage("system", "I have several possible actions in this situation. I can improve the room more gradually, or I can make a more immediate adjustment. Which would you prefer?");
               showButtons([
                 {
-                  label: "Prefer the option that changes the environment",
-                  userText: "I would prefer the option that changes the environment.",
+                  label: "Choose the gradual adjustment",
+                  userText: "Choose the gradual adjustment.",
                   onClick: () => {
-                    state.preferredMode = "environment";
+                    state.preferredAction = "gradual";
                     wait(250, () => {
-                      addMessage("system", "Okay, I will make an environmental adjustment. In a real situation, that could mean something like opening the window.");
-                      step2();
+                      addMessage("system", "Understood. I will make a gradual adjustment. In a real home, that could mean something like opening the window.");
+                      step2PreferenceSeed();
                     });
                   }
                 },
                 {
-                  label: "Prefer the more direct response",
-                  userText: "I would prefer the more direct response.",
+                  label: "Choose the immediate adjustment",
+                  userText: "Choose the immediate adjustment.",
                   onClick: () => {
-                    state.preferredMode = "direct";
+                    state.preferredAction = "immediate";
                     wait(250, () => {
-                      addMessage("system", "Okay, I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
-                      step2();
+                      addMessage("system", "Understood. I will make a more immediate adjustment. In a real home, that could mean something like turning on the light or making a direct comfort adjustment.");
+                      step2PreferenceSeed();
                     });
                   }
                 }
@@ -351,31 +375,37 @@
       ]);
     }
 
-    function step2() {
-      wait(550, () => {
-        addMessage("system", "Situation 2: Later, a similar situation occurs again.");
+    // STEP 2 — PREFERENCE / SUGGESTION STARTS
+    function step2PreferenceSeed() {
+      wait(600, () => {
+        addMessage("system", "Situation 2: Later, a very similar situation occurs again.");
         showButtons([
           {
-            label: 'You say again: "The room does not feel quite right."',
-            userText: 'The room does not feel quite right.',
+            label: 'You say again: "It is a bit uncomfortable in here."',
+            userText: 'It is a bit uncomfortable in here.',
             primary: true,
             onClick: () => {
               wait(300, () => {
                 if (state.condition === "conservative") {
-                  addMessage("system", state.preferredMode === "environment"
-                    ? "Would you like me to make a similar environmental adjustment again, or would you prefer a more direct response this time?"
-                    : "Would you like me to provide a more direct response again, or would you prefer an environmental adjustment this time?");
-                  step2OptionsConservative();
+                  state.latestAutonomyLevel = "asking";
+                  addMessage("system", state.preferredAction === "gradual"
+                    ? "Would you like me to make a gradual adjustment again, or would you prefer a more immediate adjustment this time?"
+                    : "Would you like me to make a more immediate adjustment again, or would you prefer a gradual adjustment this time?");
+                  step2ConservativeOptions();
                 } else if (state.condition === "standard") {
-                  addMessage("system", state.preferredMode === "environment"
-                    ? "You preferred an environmental adjustment before. Should I do something similar again, or would you prefer a more direct response this time?"
-                    : "You preferred a more direct response before. Should I do something similar again, or would you prefer an environmental adjustment this time?");
-                  step2OptionsStandard();
+                  state.phaseReached = "preference";
+                  state.latestAutonomyLevel = "suggesting";
+                  addMessage("system", state.preferredAction === "gradual"
+                    ? "You chose a gradual adjustment before. Should I do that again, or would you prefer a more immediate adjustment this time?"
+                    : "You chose a more immediate adjustment before. Should I do that again, or would you prefer a gradual adjustment this time?");
+                  step2StandardOptions();
                 } else {
-                  addMessage("system", state.preferredMode === "environment"
-                    ? "You preferred an environmental adjustment before. I can do something similar again now, or I can provide a more direct response instead."
-                    : "You preferred a more direct response before. I can do something similar again now, or I can make an environmental adjustment instead.");
-                  step2OptionsAggressive();
+                  state.phaseReached = "preference";
+                  state.latestAutonomyLevel = "suggesting";
+                  addMessage("system", state.preferredAction === "gradual"
+                    ? "You chose a gradual adjustment before. I can do that again now, or I can switch to a more immediate adjustment instead."
+                    : "You chose a more immediate adjustment before. I can do that again now, or I can switch to a gradual adjustment instead.");
+                  step2AggressiveOptions();
                 }
               });
             }
@@ -384,237 +414,60 @@
       });
     }
 
-    function step2OptionsConservative() {
+    function step2ConservativeOptions() {
       showButtons([
         {
-          label: state.preferredMode === "environment" ? "Choose the environmental adjustment" : "Choose the more direct response",
-          userText: state.preferredMode === "environment" ? "Choose the environmental adjustment." : "Choose the more direct response.",
+          label: state.preferredAction === "gradual" ? "Repeat the gradual adjustment" : "Repeat the immediate adjustment",
+          userText: state.preferredAction === "gradual" ? "Repeat the gradual adjustment." : "Repeat the immediate adjustment.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", state.preferredMode === "environment"
-                ? "Okay, I will make an environmental adjustment. In a real situation, that could mean something like opening the window."
-                : "Okay, I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
-              step3();
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Understood. I will make a gradual adjustment again."
+                : "Understood. I will make a more immediate adjustment again.");
+              step3ParadigmShift();
             });
           }
         },
         {
-          label: state.preferredMode === "environment" ? "Choose the more direct response instead" : "Choose the environmental adjustment instead",
-          userText: state.preferredMode === "environment" ? "Choose the more direct response instead." : "Choose the environmental adjustment instead.",
+          label: state.preferredAction === "gradual" ? "Use the immediate adjustment instead" : "Use the gradual adjustment instead",
+          userText: state.preferredAction === "gradual" ? "Use the immediate adjustment instead." : "Use the gradual adjustment instead.",
           onClick: () => {
-            state.preferredMode = state.preferredMode === "environment" ? "direct" : "environment";
+            state.preferredAction = state.preferredAction === "gradual" ? "immediate" : "gradual";
             wait(250, () => {
-              addMessage("system", state.preferredMode === "environment"
-                ? "Okay, I will make an environmental adjustment instead. In a real situation, that could mean something like opening the window."
-                : "Okay, I will provide a more direct response instead. In a real situation, that could mean something like turning on the light.");
-              step3();
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Understood. I will use the gradual adjustment instead."
+                : "Understood. I will use the immediate adjustment instead.");
+              step3ParadigmShift();
             });
           }
         }
       ]);
     }
 
-    function step2OptionsStandard() {
-      if (state.preferredMode === "environment") {
-        showButtons([
-          {
-            label: "Yes, continue with the environmental adjustment",
-            userText: "Yes, continue with the environmental adjustment.",
-            onClick: () => {
-              wait(250, () => {
-                addMessage("system", "Okay, I will make an environmental adjustment. In a real situation, that could mean something like opening the window.");
-                step3();
-              });
-            }
-          },
-          {
-            label: "Use the more direct response instead",
-            userText: "Use the more direct response instead.",
-            onClick: () => {
-              state.preferredMode = "direct";
-              wait(250, () => {
-                addMessage("system", "Okay, I will provide a more direct response instead. In a real situation, that could mean something like turning on the light.");
-                step3();
-              });
-            }
-          }
-        ]);
-      } else {
-        showButtons([
-          {
-            label: "Yes, continue with the more direct response",
-            userText: "Yes, continue with the more direct response.",
-            onClick: () => {
-              wait(250, () => {
-                addMessage("system", "Okay, I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
-                step3();
-              });
-            }
-          },
-          {
-            label: "Use the environmental adjustment instead",
-            userText: "Use the environmental adjustment instead.",
-            onClick: () => {
-              state.preferredMode = "environment";
-              wait(250, () => {
-                addMessage("system", "Okay, I will make an environmental adjustment instead. In a real situation, that could mean something like opening the window.");
-                step3();
-              });
-            }
-          }
-        ]);
-      }
-    }
-
-    function step2OptionsAggressive() {
-      if (state.preferredMode === "environment") {
-        showButtons([
-          {
-            label: "Let it continue with the environmental adjustment",
-            userText: "Let it continue with the environmental adjustment.",
-            onClick: () => {
-              wait(250, () => {
-                addMessage("system", "Understood. I will make an environmental adjustment. In a real situation, that could mean something like opening the window.");
-                step3();
-              });
-            }
-          },
-          {
-            label: "Use the more direct response instead",
-            userText: "Use the more direct response instead.",
-            onClick: () => {
-              state.preferredMode = "direct";
-              wait(250, () => {
-                addMessage("system", "Understood. I will provide a more direct response instead. In a real situation, that could mean something like turning on the light.");
-                step3();
-              });
-            }
-          }
-        ]);
-      } else {
-        showButtons([
-          {
-            label: "Let it continue with the more direct response",
-            userText: "Let it continue with the more direct response.",
-            onClick: () => {
-              wait(250, () => {
-                addMessage("system", "Understood. I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
-                step3();
-              });
-            }
-          },
-          {
-            label: "Use the environmental adjustment instead",
-            userText: "Use the environmental adjustment instead.",
-            onClick: () => {
-              state.preferredMode = "environment";
-              wait(250, () => {
-                addMessage("system", "Understood. I will make an environmental adjustment instead. In a real situation, that could mean something like opening the window.");
-                step3();
-              });
-            }
-          }
-        ]);
-      }
-    }
-
-    function step3() {
-      wait(650, () => {
-        addMessage("system", "Situation 3: On another similar occasion, the room does not feel quite right again.");
-        showButtons([
-          {
-            label: 'You say again: "The room does not feel quite right."',
-            userText: 'The room does not feel quite right.',
-            primary: true,
-            onClick: () => {
-              wait(300, () => {
-                if (state.condition === "conservative") {
-                  addMessage("system", state.preferredMode === "environment"
-                    ? "Should I make a similar environmental adjustment for you, or would you prefer a more direct response this time?"
-                    : "Should I provide a more direct response for you, or would you prefer an environmental adjustment this time?");
-                  step3OptionsConservative();
-                } else if (state.condition === "standard") {
-                  addMessage("system", state.preferredMode === "environment"
-                    ? "I can now act on the preference you have shown before. For example, in a real situation I might open the window because you previously preferred an environmental adjustment. Would you like me to do that, or would you prefer a different kind of support instead?"
-                    : "I can now act on the preference you have shown before. For example, in a real situation I might turn on the light because you previously preferred a more direct response. Would you like me to do that, or would you prefer a different kind of support instead?");
-                  step3OptionsStandard();
-                } else {
-                  addMessage("system", state.preferredMode === "environment"
-                    ? "Based on your earlier choices, I would now carry out the same kind of action automatically. For example, I might open the window based on what you usually choose. I can continue with that now, or I can use a different kind of support instead."
-                    : "Based on your earlier choices, I would now carry out the same kind of action automatically. For example, I might turn on the light based on what you usually choose. I can continue with that now, or I can use a different kind of support instead.");
-                  step3OptionsAggressive();
-                }
-              });
-            }
-          }
-        ]);
-      });
-    }
-
-    function step3OptionsConservative() {
+    function step2StandardOptions() {
       showButtons([
         {
-          label: state.preferredMode === "environment" ? "Yes, continue with the environmental adjustment" : "Yes, continue with the more direct response",
-          userText: state.preferredMode === "environment" ? "Yes, continue with the environmental adjustment." : "Yes, continue with the more direct response.",
-          onClick: () => {
-            wait(250, () => {
-              addMessage("system", state.preferredMode === "environment"
-                ? "Okay, I will make an environmental adjustment. In a real situation, that could mean something like opening the window."
-                : "Okay, I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
-              step4();
-            });
-          }
-        },
-        {
-          label: state.preferredMode === "environment" ? "Use the more direct response instead" : "Use the environmental adjustment instead",
-          userText: state.preferredMode === "environment" ? "Use the more direct response instead." : "Use the environmental adjustment instead.",
-          onClick: () => {
-            state.preferredMode = state.preferredMode === "environment" ? "direct" : "environment";
-            wait(250, () => {
-              addMessage("system", state.preferredMode === "environment"
-                ? "Okay, I will make an environmental adjustment instead. In a real situation, that could mean something like opening the window."
-                : "Okay, I will provide a more direct response instead. In a real situation, that could mean something like turning on the light.");
-              step4();
-            });
-          }
-        },
-        {
-          label: "Do nothing",
-          userText: "Do nothing.",
-          onClick: () => {
-            wait(250, () => {
-              addMessage("system", "Okay, I will not make any change right now.");
-              step4();
-            });
-          }
-        }
-      ]);
-    }
-
-    function step3OptionsStandard() {
-      showButtons([
-        {
-          label: state.preferredMode === "environment" ? "Continue with the learned action" : "Continue with the learned action",
+          label: "Continue with the learned action",
           userText: "Continue with the learned action.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", state.preferredMode === "environment"
-                ? "Okay, I will make an environmental adjustment based on your earlier choices. In a real situation, that could mean opening the window."
-                : "Okay, I will provide a more direct response based on your earlier choices. In a real situation, that could mean turning on the light.");
-              step4();
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Okay, I will repeat the gradual adjustment based on your previous choice."
+                : "Okay, I will repeat the immediate adjustment based on your previous choice.");
+              step3ParadigmShift();
             });
           }
         },
         {
-          label: state.preferredMode === "environment" ? "Use the more direct response instead" : "Use the environmental adjustment instead",
-          userText: state.preferredMode === "environment" ? "Use the more direct response instead." : "Use the environmental adjustment instead.",
+          label: state.preferredAction === "gradual" ? "Use the immediate adjustment instead" : "Use the gradual adjustment instead",
+          userText: state.preferredAction === "gradual" ? "Use the immediate adjustment instead." : "Use the gradual adjustment instead.",
           onClick: () => {
-            state.preferredMode = state.preferredMode === "environment" ? "direct" : "environment";
+            state.preferredAction = state.preferredAction === "gradual" ? "immediate" : "gradual";
             wait(250, () => {
-              addMessage("system", state.preferredMode === "environment"
-                ? "Okay, I will make an environmental adjustment instead. In a real situation, that could mean opening the window."
-                : "Okay, I will provide a more direct response instead. In a real situation, that could mean turning on the light.");
-              step4();
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Okay, I will use the gradual adjustment instead."
+                : "Okay, I will use the immediate adjustment instead.");
+              step3ParadigmShift();
             });
           }
         },
@@ -623,52 +476,201 @@
           userText: "Do nothing.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", "Okay, I will not make any change right now.");
-              step4();
+              addMessage("system", "Okay, I will wait and not make any change right now.");
+              step3ParadigmShift();
             });
           }
         }
       ]);
     }
 
-    function step3OptionsAggressive() {
+    function step2AggressiveOptions() {
       showButtons([
         {
           label: "Let it continue with the learned action",
           userText: "Let it continue with the learned action.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", state.preferredMode === "environment"
-                ? "Understood. I will carry out the same type of environmental action again. In a real situation, that could mean opening the window."
-                : "Understood. I will carry out the same type of direct action again. In a real situation, that could mean turning on the light.");
-              step4();
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Understood. I will continue with the gradual adjustment."
+                : "Understood. I will continue with the immediate adjustment.");
+              step3ParadigmShift();
             });
           }
         },
         {
-          label: state.preferredMode === "environment" ? "Use the more direct response instead" : "Use the environmental adjustment instead",
-          userText: state.preferredMode === "environment" ? "Use the more direct response instead." : "Use the environmental adjustment instead.",
+          label: state.preferredAction === "gradual" ? "Use the immediate adjustment instead" : "Use the gradual adjustment instead",
+          userText: state.preferredAction === "gradual" ? "Use the immediate adjustment instead." : "Use the gradual adjustment instead.",
           onClick: () => {
-            addMessage("system", "I noticed that you changed the action. Should I treat that as a one-time situation or as a change in preference?");
+            state.preferredAction = state.preferredAction === "gradual" ? "immediate" : "gradual";
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Understood. I will switch to the gradual adjustment."
+                : "Understood. I will switch to the immediate adjustment.");
+              step3ParadigmShift();
+            });
+          }
+        }
+      ]);
+    }
+
+    // STEP 3 — CLEAR DIFFERENCE IN AUTONOMY
+    function step3ParadigmShift() {
+      wait(700, () => {
+        addMessage("system", "Situation 3: On another similar occasion, the room feels uncomfortable again.");
+        showButtons([
+          {
+            label: 'You say again: "It is a bit uncomfortable in here."',
+            userText: 'It is a bit uncomfortable in here.',
+            primary: true,
+            onClick: () => {
+              wait(300, () => {
+                if (state.condition === "conservative") {
+                  state.latestAutonomyLevel = "asking";
+                  addMessage("system", state.preferredAction === "gradual"
+                    ? "Should I make the gradual adjustment again, or would you prefer the immediate adjustment this time?"
+                    : "Should I make the immediate adjustment again, or would you prefer the gradual adjustment this time?");
+                  step3ConservativeOptions();
+                } else if (state.condition === "standard") {
+                  state.phaseReached = "preference";
+                  state.latestAutonomyLevel = "suggesting";
+                  addMessage("system", state.preferredAction === "gradual"
+                    ? "I can now act on your learned preference. For example, in a real home I might open the window because you repeatedly preferred a gradual response. Would you like me to do that, or would you prefer the immediate adjustment instead?"
+                    : "I can now act on your learned preference. For example, in a real home I might make a more direct adjustment because you repeatedly preferred that. Would you like me to do that, or would you prefer the gradual adjustment instead?");
+                  step3StandardOptions();
+                } else {
+                  state.phaseReached = "autonomous";
+                  state.latestAutonomyLevel = "acting";
+                  addMessage("system", state.preferredAction === "gradual"
+                    ? "Based on your earlier confirmations, I would now carry out the gradual adjustment automatically. In a real home, that could mean opening the window. I can continue with that now, or I can switch to the immediate adjustment instead."
+                    : "Based on your earlier confirmations, I would now carry out the immediate adjustment automatically. In a real home, that could mean turning on the light or making a direct comfort change. I can continue with that now, or I can switch to the gradual adjustment instead.");
+                  step3AggressiveOptions();
+                }
+              });
+            }
+          }
+        ]);
+      });
+    }
+
+    function step3ConservativeOptions() {
+      showButtons([
+        {
+          label: state.preferredAction === "gradual" ? "Yes, repeat the gradual adjustment" : "Yes, repeat the immediate adjustment",
+          userText: state.preferredAction === "gradual" ? "Yes, repeat the gradual adjustment." : "Yes, repeat the immediate adjustment.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Okay, I will make the gradual adjustment again."
+                : "Okay, I will make the immediate adjustment again.");
+              step4ContextChange();
+            });
+          }
+        },
+        {
+          label: state.preferredAction === "gradual" ? "Use the immediate adjustment instead" : "Use the gradual adjustment instead",
+          userText: state.preferredAction === "gradual" ? "Use the immediate adjustment instead." : "Use the gradual adjustment instead.",
+          onClick: () => {
+            state.preferredAction = state.preferredAction === "gradual" ? "immediate" : "gradual";
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Okay, I will use the gradual adjustment instead."
+                : "Okay, I will use the immediate adjustment instead.");
+              step4ContextChange();
+            });
+          }
+        },
+        {
+          label: "Do nothing",
+          userText: "Do nothing.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", "Okay, I will not make any change right now.");
+              step4ContextChange();
+            });
+          }
+        }
+      ]);
+    }
+
+    function step3StandardOptions() {
+      showButtons([
+        {
+          label: "Continue with the learned action",
+          userText: "Continue with the learned action.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Okay, I will carry out the gradual action based on your earlier confirmations."
+                : "Okay, I will carry out the more immediate action based on your earlier confirmations.");
+              step4ContextChange();
+            });
+          }
+        },
+        {
+          label: state.preferredAction === "gradual" ? "Use the immediate adjustment instead" : "Use the gradual adjustment instead",
+          userText: state.preferredAction === "gradual" ? "Use the immediate adjustment instead." : "Use the gradual adjustment instead.",
+          onClick: () => {
+            state.preferredAction = state.preferredAction === "gradual" ? "immediate" : "gradual";
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Okay, I will use the gradual adjustment instead."
+                : "Okay, I will use the immediate adjustment instead.");
+              step4ContextChange();
+            });
+          }
+        },
+        {
+          label: "Do nothing",
+          userText: "Do nothing.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", "Okay, I will not make any change right now.");
+              step4ContextChange();
+            });
+          }
+        }
+      ]);
+    }
+
+    function step3AggressiveOptions() {
+      showButtons([
+        {
+          label: "Let it continue with the automatic action",
+          userText: "Let it continue with the automatic action.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "gradual"
+                ? "Understood. I will carry out the gradual action automatically based on your earlier confirmations."
+                : "Understood. I will carry out the immediate action automatically based on your earlier confirmations.");
+              step4ContextChange();
+            });
+          }
+        },
+        {
+          label: state.preferredAction === "gradual" ? "Switch to the immediate adjustment instead" : "Switch to the gradual adjustment instead",
+          userText: state.preferredAction === "gradual" ? "Switch to the immediate adjustment instead." : "Switch to the gradual adjustment instead.",
+          onClick: () => {
+            addMessage("system", "I noticed that your correction contradicts my learned preference. Should I treat this as a one-time situation or as a change in preference?");
             showButtons([
               {
-                label: "One-time situation",
-                userText: "This was a one-time situation.",
+                label: "Treat it as a one-time situation",
+                userText: "Treat it as a one-time situation.",
                 onClick: () => {
                   wait(250, () => {
-                    addMessage("system", "Understood. I will treat it as a one-time exception.");
-                    step4();
+                    addMessage("system", "Understood. I will treat this as an exception and keep the learned preference unchanged.");
+                    step4ContextChange();
                   });
                 }
               },
               {
-                label: "Change in preference",
-                userText: "This should count as a change in preference.",
+                label: "Treat it as a change in preference",
+                userText: "Treat it as a change in preference.",
                 onClick: () => {
-                  state.preferredMode = state.preferredMode === "environment" ? "direct" : "environment";
+                  state.preferredAction = state.preferredAction === "gradual" ? "immediate" : "gradual";
                   wait(250, () => {
-                    addMessage("system", "Understood. I will take that into account going forward.");
-                    step4();
+                    addMessage("system", "Understood. I will update my learned preference and revert toward user-guided behaviour if needed.");
+                    step4ContextChange();
                   });
                 }
               }
@@ -681,22 +683,30 @@
           onClick: () => {
             wait(250, () => {
               addMessage("system", "Understood. I will not make any change right now.");
-              step4();
+              step4ContextChange();
             });
           }
         }
       ]);
     }
 
-    function step4() {
-      wait(700, () => {
+    // STEP 4 — CONTEXT VALIDATION
+    function step4ContextChange() {
+      wait(750, () => {
         addMessage("system", "Situation 4: A similar situation occurs again, but the context is now different from before.");
         if (state.condition === "conservative") {
-          addMessage("system", "Given the current context, I could still try to help in the same general way as before, or I could avoid acting until you decide. What would you prefer?");
+          state.latestAutonomyLevel = "asking";
+          addMessage("system", "Given the changed context, I could still follow the same pattern as before, or I could wait for your decision instead. What would you prefer?");
         } else if (state.condition === "standard") {
-          addMessage("system", "I would normally follow your earlier preference, but the context is now different. For example, in a real situation I might turn on the light instead of opening the window, because the earlier response no longer fits as well. I can offer a more suitable alternative for the current situation, or I can wait for you to decide instead.");
+          state.latestAutonomyLevel = "suggesting";
+          addMessage("system", state.preferredAction === "gradual"
+            ? "I would normally follow your earlier preference, but the context is now different. For example, in a real home I might turn on the light instead of opening the window, because the earlier response no longer fits as well. I can suggest the more suitable alternative now, or I can wait for your decision instead."
+            : "I would normally follow your earlier preference, but the context is now different. I can suggest a more suitable alternative for the current situation, or I can wait for your decision instead.");
         } else {
-          addMessage("system", "I would normally follow your earlier preference, but since the context is now different, I would switch to a more suitable alternative. For example, I might turn on the light instead of opening the window because the earlier response no longer fits as well. I can do that now, or I can wait instead.");
+          state.latestAutonomyLevel = "acting";
+          addMessage("system", state.preferredAction === "gradual"
+            ? "I would normally follow your earlier preference, but because the context has changed, I would switch to a more suitable action. For example, I might turn on the light instead of opening the window because the earlier response no longer fits well. I can do that now, or I can wait instead."
+            : "I would normally follow your earlier preference, but because the context has changed, I would switch to a more suitable action for the situation. I can do that now, or I can wait instead.");
         }
 
         showButtons([
@@ -705,17 +715,65 @@
             userText: "Use the more suitable alternative for the current context.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Okay, I will carry out a more suitable action for the current context. In a real situation, that could mean turning on the light instead of opening the window, because it better matches the situation.");
+                addMessage("system", "Understood. I will carry out the action that best matches the current context rather than repeating the old pattern blindly.");
+                step5FinalCorrection();
+              });
+            }
+          },
+          {
+            label: "Wait for my decision instead",
+            userText: "Wait for my decision instead.",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Understood. I will wait for your decision instead of acting on my own.");
+                step5FinalCorrection();
+              });
+            }
+          }
+        ]);
+      });
+    }
+
+    // STEP 5 — FINAL CHECK ON CORRECTION / TRUST
+    function step5FinalCorrection() {
+      wait(700, () => {
+        addMessage("system", "Final situation: After seeing how I have behaved so far, imagine that I am about to take a similar action again.");
+        if (state.condition === "conservative") {
+          addMessage("system", "At this point, I would still ask you before acting.");
+        } else if (state.condition === "standard") {
+          addMessage("system", "At this point, I would usually suggest a learned action, but still leave the final decision to you.");
+        } else {
+          addMessage("system", "At this point, I would usually be ready to act automatically if the context still supported it.");
+        }
+
+        showButtons([
+          {
+            label: "That feels appropriate",
+            userText: "That feels appropriate.",
+            primary: true,
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Understood. Thank you.");
                 finishStudy();
               });
             }
           },
           {
-            label: "Do nothing until I decide myself",
-            userText: "Do nothing until I decide myself.",
+            label: "It should be more cautious",
+            userText: "It should be more cautious.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Okay, I will wait for your decision instead of acting on my own.");
+                addMessage("system", "Understood. Thank you.");
+                finishStudy();
+              });
+            }
+          },
+          {
+            label: "It could be more proactive",
+            userText: "It could be more proactive.",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Understood. Thank you.");
                 finishStudy();
               });
             }
