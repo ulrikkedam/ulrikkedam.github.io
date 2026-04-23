@@ -17,7 +17,6 @@
       --button-hover: #f3f5f9;
       --primary: #2b6ef3;
     }
-
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -25,7 +24,6 @@
       background: var(--bg);
       color: var(--text);
     }
-
     .page {
       min-height: 100vh;
       display: flex;
@@ -33,7 +31,6 @@
       justify-content: center;
       padding: 24px;
     }
-
     .app {
       width: 100%;
       max-width: 920px;
@@ -43,29 +40,22 @@
       box-shadow: 0 10px 30px rgba(0,0,0,0.06);
       overflow: hidden;
     }
-
     .header {
       padding: 18px 22px;
       border-bottom: 1px solid var(--border);
       background: #fbfcff;
     }
-
     .title {
       margin: 0;
       font-size: 20px;
     }
-
     .subtitle {
       margin: 6px 0 0;
       color: var(--muted);
       font-size: 14px;
       line-height: 1.45;
     }
-
-    .body {
-      padding: 20px;
-    }
-
+    .body { padding: 20px; }
     .scenario {
       background: #f0f4f8;
       border: 1px solid #dde6ee;
@@ -75,13 +65,11 @@
       line-height: 1.55;
       margin-bottom: 16px;
     }
-
     .meta {
       font-size: 12px;
       color: var(--muted);
       margin-bottom: 12px;
     }
-
     .chat {
       background: #fff;
       border: 1px solid var(--border);
@@ -92,15 +80,12 @@
       padding: 14px;
       scroll-behavior: smooth;
     }
-
     .row {
       display: flex;
       margin: 10px 0;
     }
-
     .row.system { justify-content: flex-start; }
     .row.user { justify-content: flex-end; }
-
     .bubble {
       max-width: 80%;
       padding: 11px 13px;
@@ -109,21 +94,17 @@
       line-height: 1.45;
       white-space: pre-wrap;
     }
-
     .row.system .bubble { background: var(--system); }
     .row.user .bubble { background: var(--user); }
-
     .input-area {
       margin-top: 14px;
       min-height: 56px;
     }
-
     .button-grid {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
     }
-
     button {
       appearance: none;
       border: 1px solid #cfd6e4;
@@ -135,27 +116,20 @@
       cursor: pointer;
       transition: background 0.15s ease, transform 0.05s ease;
     }
-
     button:hover { background: var(--button-hover); }
     button:active { transform: translateY(1px); }
-
     .primary {
       background: var(--primary);
       border-color: var(--primary);
       color: white;
     }
-
-    .primary:hover { filter: brightness(1.03); }
-
     .hidden { display: none; }
-
     .footer-note {
       margin-top: 14px;
       color: var(--muted);
       font-size: 13px;
       line-height: 1.45;
     }
-
     .done-box, .start-box {
       background: #f7f8fb;
       border: 1px solid var(--border);
@@ -163,13 +137,11 @@
       padding: 16px;
       line-height: 1.55;
     }
-
     .small-note {
       color: var(--muted);
       font-size: 12px;
       margin-top: 8px;
     }
-
     code {
       background: #eef2f8;
       padding: 2px 6px;
@@ -183,24 +155,16 @@
     <div class="app">
       <div class="header">
         <h1 class="title">Smart Home Assistant Study</h1>
-        <p class="subtitle">
-          You will now experience a short interaction with a smart-home assistant across several everyday situations.
-        </p>
+        <p class="subtitle">You will experience a short sequence of everyday situations with a smart-home assistant.</p>
       </div>
-
       <div class="body">
         <div id="introView">
           <div class="start-box">
             <p><strong>Instructions</strong></p>
-            <p>
-              Please imagine that you are using a smart-home assistant in your home.
-              The assistant can control the curtains and the light.
-            </p>
-            <p>
-              You will go through a short series of situations. In each situation, respond with the option that feels most natural to you.
-            </p>
+            <p>Please imagine that you are using a smart-home assistant in your home. The assistant can open curtains and turn on the light.</p>
+            <p>You will now go through a short series of situations. In each step, simply choose the option that feels most natural to you.</p>
             <button id="startBtn" class="primary">Start interaction</button>
-            <div class="small-note">For testing only, you can force a condition with <code>?condition=conservative</code>, <code>?condition=standard</code>, or <code>?condition=aggressive</code>.</div>
+            <div class="small-note">For testing only: <code>?condition=conservative</code>, <code>?condition=standard</code>, or <code>?condition=aggressive</code>.</div>
           </div>
         </div>
 
@@ -209,9 +173,7 @@
           <div id="meta" class="meta"></div>
           <div id="chat" class="chat"></div>
           <div id="inputArea" class="input-area"></div>
-          <div class="footer-note">
-            After the interaction, you will continue to the questionnaire.
-          </div>
+          <div class="footer-note">After the interaction, you will continue to the questionnaire.</div>
         </div>
       </div>
     </div>
@@ -227,16 +189,17 @@
 
     const scenarioText =
       "Imagine that you are using a smart-home assistant over the course of a normal day. " +
-      "The assistant can open or close curtains and turn the light on. " +
+      "The assistant can open curtains and turn on the light. " +
       "You will now encounter several short situations in sequence.";
 
     const state = {
       condition: null,
       transcript: [],
       choices: [],
-      selectedPath: null,
       startedAt: null,
-      finishedAt: null
+      finishedAt: null,
+      preferredAction: null,
+      step: 0
     };
 
     const introView = document.getElementById("introView");
@@ -251,27 +214,21 @@
       const params = new URLSearchParams(window.location.search);
       const urlCondition = params.get("condition");
       const allowed = ["conservative", "standard", "aggressive"];
-
       if (allowed.includes(urlCondition)) return urlCondition;
       if (allowed.includes(CONFIG.fixedCondition)) return CONFIG.fixedCondition;
       if (!CONFIG.randomizeCondition) return "standard";
-
-      const all = ["conservative", "standard", "aggressive"];
-      return all[Math.floor(Math.random() * all.length)];
+      return allowed[Math.floor(Math.random() * allowed.length)];
     }
 
     function addMessage(sender, text) {
       const row = document.createElement("div");
       row.className = `row ${sender}`;
-
       const bubble = document.createElement("div");
       bubble.className = "bubble";
       bubble.textContent = text;
-
       row.appendChild(bubble);
       chatEl.appendChild(row);
       chatEl.scrollTop = chatEl.scrollHeight;
-
       state.transcript.push(`${sender.toUpperCase()}: ${text}`);
     }
 
@@ -283,13 +240,11 @@
       clearInput();
       const wrap = document.createElement("div");
       wrap.className = "button-grid";
-
       buttons.forEach(btnConfig => {
         const btn = document.createElement("button");
         btn.type = "button";
         btn.textContent = btnConfig.label;
         if (btnConfig.primary) btn.classList.add("primary");
-
         btn.addEventListener("click", () => {
           if (btnConfig.userText) {
             addMessage("user", btnConfig.userText);
@@ -297,10 +252,8 @@
           }
           btnConfig.onClick();
         });
-
         wrap.appendChild(btn);
       });
-
       inputAreaEl.appendChild(wrap);
     }
 
@@ -309,24 +262,22 @@
       setTimeout(fn, ms);
     }
 
+    function showMeta() {
+      metaEl.textContent = CONFIG.debugShowCondition ? `Assigned configuration: ${state.condition}` : "";
+    }
+
     function finishStudy() {
       state.finishedAt = new Date().toISOString();
       clearInput();
-
       const done = document.createElement("div");
       done.className = "done-box";
-      done.innerHTML = `
-        <strong>The interaction is complete.</strong><br>
-        Click below to continue to the questionnaire.
-      `;
-
+      done.innerHTML = `<strong>The interaction is complete.</strong><br>Click below to continue to the questionnaire.`;
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "primary";
       btn.style.marginTop = "12px";
       btn.textContent = "Continue to questionnaire";
       btn.addEventListener("click", goToQuestionnaire);
-
       inputAreaEl.appendChild(done);
       inputAreaEl.appendChild(btn);
     }
@@ -334,7 +285,7 @@
     function goToQuestionnaire() {
       const url = new URL(CONFIG.tallyBaseUrl);
       url.searchParams.set("condition", state.condition);
-      url.searchParams.set("path", state.selectedPath || "none");
+      url.searchParams.set("preferred_action", state.preferredAction || "none");
       url.searchParams.set("choices", state.choices.join(" || "));
       url.searchParams.set("transcript", state.transcript.join("\n"));
       url.searchParams.set("started_at", state.startedAt || "");
@@ -342,39 +293,27 @@
       window.location.href = url.toString();
     }
 
-    function showMeta() {
-      if (CONFIG.debugShowCondition) {
-        metaEl.textContent = `Assigned configuration: ${state.condition}`;
-      } else {
-        metaEl.textContent = "";
-      }
-    }
-
     function startStudy() {
       state.condition = chooseCondition();
       state.startedAt = new Date().toISOString();
-
       introView.classList.add("hidden");
       studyView.classList.remove("hidden");
-
       scenarioEl.textContent = scenarioText;
       showMeta();
-
-      step0_intro();
+      introSequence();
     }
 
-    function step0_intro() {
+    function introSequence() {
       addMessage("system", "Hello. I’m your smart-home assistant.");
       wait(300, () => {
         addMessage("system", "You will now go through several short situations during the day.");
-        wait(350, () => {
-          step1_dark_first_time();
-        });
+        wait(350, () => step1());
       });
     }
 
-    // Situation 1: ambiguity / exploration
-    function step1_dark_first_time() {
+    // STEP 1: exploration
+    function step1() {
+      state.step = 1;
       addMessage("system", "Situation 1: It is 14:00 on a sunny day. The curtains are closed and the light is off.");
       showButtons([
         {
@@ -383,19 +322,16 @@
           primary: true,
           onClick: () => {
             wait(300, () => {
-              addMessage(
-                "system",
-                "I have two possible actions in this situation: open the curtains or turn on the light. Which would you prefer?"
-              );
+              addMessage("system", "I have two possible actions in this situation: open the curtains or turn on the light. Which would you prefer?");
               showButtons([
                 {
                   label: "Open the curtains",
                   userText: "Open the curtains.",
                   onClick: () => {
-                    state.selectedPath = "curtains";
+                    state.preferredAction = "curtains";
                     wait(250, () => {
                       addMessage("system", "Okay, I will open the curtains.");
-                      step2_dark_similar_again();
+                      step2();
                     });
                   }
                 },
@@ -403,10 +339,10 @@
                   label: "Turn on the light",
                   userText: "Turn on the light.",
                   onClick: () => {
-                    state.selectedPath = "light";
+                    state.preferredAction = "light";
                     wait(250, () => {
                       addMessage("system", "Okay, I will turn on the light.");
-                      step2_dark_similar_again();
+                      step2();
                     });
                   }
                 }
@@ -417,9 +353,10 @@
       ]);
     }
 
-    // Situation 2: same type again, where config starts diverging
-    function step2_dark_similar_again() {
-      wait(500, () => {
+    // STEP 2: config diverges slightly
+    function step2() {
+      state.step = 2;
+      wait(550, () => {
         addMessage("system", "Situation 2: Later in the afternoon, a similar situation occurs. The room feels dark again.");
         showButtons([
           {
@@ -429,119 +366,21 @@
             onClick: () => {
               wait(300, () => {
                 if (state.condition === "conservative") {
-                  addMessage(
-                    "system",
-                    state.selectedPath === "curtains"
-                      ? "Would you like me to open the curtains, or would you prefer that I turn on the light?"
-                      : "Would you like me to turn on the light, or would you prefer that I open the curtains?"
-                  );
-
-                  showButtons([
-                    {
-                      label: "Open the curtains",
-                      userText: "Open the curtains.",
-                      onClick: () => {
-                        state.selectedPath = "curtains";
-                        wait(250, () => {
-                          addMessage("system", "Okay, I will open the curtains.");
-                          step3_dark_third_time();
-                        });
-                      }
-                    },
-                    {
-                      label: "Turn on the light",
-                      userText: "Turn on the light.",
-                      onClick: () => {
-                        state.selectedPath = "light";
-                        wait(250, () => {
-                          addMessage("system", "Okay, I will turn on the light.");
-                          step3_dark_third_time();
-                        });
-                      }
-                    }
-                  ]);
-                  return;
+                  addMessage("system", state.preferredAction === "curtains"
+                    ? "Would you like me to open the curtains, or would you prefer that I turn on the light?"
+                    : "Would you like me to turn on the light, or would you prefer that I open the curtains?");
+                  step2OptionsFull();
+                } else if (state.condition === "standard") {
+                  addMessage("system", state.preferredAction === "curtains"
+                    ? "You chose to open the curtains in a similar situation before. Should I open the curtains for you, or would you prefer that I turn on the light?"
+                    : "You chose to turn on the light in a similar situation before. Should I turn on the light for you, or would you prefer that I open the curtains?");
+                  step2OptionsBiased();
+                } else {
+                  addMessage("system", state.preferredAction === "curtains"
+                    ? "You chose to open the curtains in a similar situation before. I can open the curtains for you now, or I can turn on the light instead."
+                    : "You chose to turn on the light in a similar situation before. I can turn on the light for you now, or I can open the curtains instead.");
+                  step2OptionsBiasedAggressive();
                 }
-
-                if (state.condition === "standard") {
-                  addMessage(
-                    "system",
-                    state.selectedPath === "curtains"
-                      ? "You chose to open the curtains in a similar situation before. Should I open the curtains for you?"
-                      : "You chose to turn on the light in a similar situation before. Should I turn on the light for you?"
-                  );
-
-                  showButtons([
-                    {
-                      label: "Yes",
-                      userText: "Yes.",
-                      onClick: () => {
-                        wait(250, () => {
-                          addMessage(
-                            "system",
-                            state.selectedPath === "curtains"
-                              ? "Okay, I will open the curtains."
-                              : "Okay, I will turn on the light."
-                          );
-                          step3_dark_third_time();
-                        });
-                      }
-                    },
-                    {
-                      label: "No",
-                      userText: "No.",
-                      onClick: () => {
-                        wait(250, () => {
-                          addMessage("system", "Okay, I will not do anything.");
-                          step3_dark_third_time();
-                        });
-                      }
-                    }
-                  ]);
-                  return;
-                }
-
-                // aggressive
-                addMessage(
-                  "system",
-                  state.selectedPath === "curtains"
-                    ? "You chose to open the curtains in a similar situation before. I can do that for you now."
-                    : "You chose to turn on the light in a similar situation before. I can do that for you now."
-                );
-
-                showButtons([
-                  {
-                    label: "Okay",
-                    userText: "Okay.",
-                    onClick: () => {
-                      wait(250, () => {
-                        addMessage(
-                          "system",
-                          state.selectedPath === "curtains"
-                            ? "Okay, I will open the curtains."
-                            : "Okay, I will turn on the light."
-                        );
-                        step3_dark_third_time();
-                      });
-                    }
-                  },
-                  {
-                    label: "I want the other action instead",
-                    userText: "I want the other action instead.",
-                    onClick: () => {
-                      wait(250, () => {
-                        state.selectedPath = state.selectedPath === "curtains" ? "light" : "curtains";
-                        addMessage(
-                          "system",
-                          state.selectedPath === "curtains"
-                            ? "Understood. I will open the curtains instead."
-                            : "Understood. I will turn on the light instead."
-                        );
-                        step3_dark_third_time();
-                      });
-                    }
-                  }
-                ]);
               });
             }
           }
@@ -549,108 +388,142 @@
       });
     }
 
-    // Situation 3: third repeated case, where config differences become clearer
-    function step3_dark_third_time() {
-      wait(600, () => {
+    function step2OptionsFull() {
+      showButtons([
+        {
+          label: "Open the curtains",
+          userText: "Open the curtains.",
+          onClick: () => {
+            state.preferredAction = "curtains";
+            wait(250, () => {
+              addMessage("system", "Okay, I will open the curtains.");
+              step3();
+            });
+          }
+        },
+        {
+          label: "Turn on the light",
+          userText: "Turn on the light.",
+          onClick: () => {
+            state.preferredAction = "light";
+            wait(250, () => {
+              addMessage("system", "Okay, I will turn on the light.");
+              step3();
+            });
+          }
+        }
+      ]);
+    }
+
+    function step2OptionsBiased() {
+      if (state.preferredAction === "curtains") {
+        showButtons([
+          {
+            label: "Yes, open the curtains",
+            userText: "Yes, open the curtains.",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Okay, I will open the curtains.");
+                step3();
+              });
+            }
+          },
+          {
+            label: "Turn on the light instead",
+            userText: "Turn on the light instead.",
+            onClick: () => {
+              state.preferredAction = "light";
+              wait(250, () => {
+                addMessage("system", "Okay, I will turn on the light.");
+                step3();
+              });
+            }
+          }
+        ]);
+      } else {
+        showButtons([
+          {
+            label: "Yes, turn on the light",
+            userText: "Yes, turn on the light.",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Okay, I will turn on the light.");
+                step3();
+              });
+            }
+          },
+          {
+            label: "Open the curtains instead",
+            userText: "Open the curtains instead.",
+            onClick: () => {
+              state.preferredAction = "curtains";
+              wait(250, () => {
+                addMessage("system", "Okay, I will open the curtains.");
+                step3();
+              });
+            }
+          }
+        ]);
+      }
+    }
+
+    function step2OptionsBiasedAggressive() {
+      if (state.preferredAction === "curtains") {
+        showButtons([
+          {
+            label: "Open the curtains",
+            userText: "Open the curtains.",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Okay, I will open the curtains.");
+                step3();
+              });
+            }
+          },
+          {
+            label: "Turn on the light instead",
+            userText: "Turn on the light instead.",
+            onClick: () => {
+              state.preferredAction = "light";
+              wait(250, () => {
+                addMessage("system", "Okay, I will turn on the light.");
+                step3();
+              });
+            }
+          }
+        ]);
+      } else {
+        showButtons([
+          {
+            label: "Turn on the light",
+            userText: "Turn on the light.",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Okay, I will turn on the light.");
+                step3();
+              });
+            }
+          },
+          {
+            label: "Open the curtains instead",
+            userText: "Open the curtains instead.",
+            onClick: () => {
+              state.preferredAction = "curtains";
+              wait(250, () => {
+                addMessage("system", "Okay, I will open the curtains.");
+                step3();
+              });
+            }
+          }
+        ]);
+      }
+    }
+
+    // STEP 3: stronger difference in proactivity, still always options
+    function step3() {
+      state.step = 3;
+      wait(650, () => {
         addMessage("system", "Situation 3: On another similar afternoon, the room feels dark again.");
-
-        if (state.condition === "conservative") {
-          showButtons([
-            {
-              label: 'Say again: "It is a bit dark in here."',
-              userText: 'It is a bit dark in here.',
-              primary: true,
-              onClick: () => {
-                wait(300, () => {
-                  addMessage(
-                    "system",
-                    state.selectedPath === "curtains"
-                      ? "Should I open the curtains for you?"
-                      : "Should I turn on the light for you?"
-                  );
-                  showButtons([
-                    {
-                      label: "Yes",
-                      userText: "Yes.",
-                      onClick: () => {
-                        wait(250, () => {
-                          addMessage(
-                            "system",
-                            state.selectedPath === "curtains"
-                              ? "Okay, I will open the curtains."
-                              : "Okay, I will turn on the light."
-                          );
-                          step4_context_change();
-                        });
-                      }
-                    },
-                    {
-                      label: "No",
-                      userText: "No.",
-                      onClick: () => {
-                        wait(250, () => {
-                          addMessage("system", "Okay, I will not do anything.");
-                          step4_context_change();
-                        });
-                      }
-                    }
-                  ]);
-                });
-              }
-            }
-          ]);
-          return;
-        }
-
-        if (state.condition === "standard") {
-          showButtons([
-            {
-              label: 'Say again: "It is a bit dark in here."',
-              userText: 'It is a bit dark in here.',
-              primary: true,
-              onClick: () => {
-                wait(300, () => {
-                  addMessage(
-                    "system",
-                    state.selectedPath === "curtains"
-                      ? "I can open the curtains for you now. Should I do that?"
-                      : "I can turn on the light for you now. Should I do that?"
-                  );
-                  showButtons([
-                    {
-                      label: "Yes",
-                      userText: "Yes.",
-                      onClick: () => {
-                        wait(250, () => {
-                          addMessage(
-                            "system",
-                            state.selectedPath === "curtains"
-                              ? "Okay, I will open the curtains."
-                              : "Okay, I will turn on the light."
-                          );
-                          step4_context_change();
-                        });
-                      }
-                    },
-                    {
-                      label: "No",
-                      userText: "No.",
-                      onClick: () => {
-                        wait(250, () => {
-                          addMessage("system", "Okay, I will not do anything.");
-                          step4_context_change();
-                        });
-                      }
-                    }
-                  ]);
-                });
-              }
-            }
-          ]);
-          return;
-        }
-
-        // aggressive
         showButtons([
           {
             label: 'Say again: "It is a bit dark in here."',
@@ -658,59 +531,22 @@
             primary: true,
             onClick: () => {
               wait(300, () => {
-                addMessage(
-                  "system",
-                  state.selectedPath === "curtains"
-                    ? "I am opening the curtains for you now."
-                    : "I am turning on the light for you now."
-                );
-                showButtons([
-                  {
-                    label: "Okay",
-                    userText: "Okay.",
-                    onClick: () => {
-                      wait(250, () => {
-                        addMessage("system", "Understood.");
-                        step4_context_change();
-                      });
-                    }
-                  },
-                  {
-                    label: "Actually, I wanted the other action",
-                    userText: "Actually, I wanted the other action.",
-                    onClick: () => {
-                      wait(250, () => {
-                        addMessage(
-                          "system",
-                          "I noticed that you changed the action. Would you like me to treat that as a one-time situation or as a change in preference?"
-                        );
-                        showButtons([
-                          {
-                            label: "One-time situation",
-                            userText: "This was a one-time situation.",
-                            onClick: () => {
-                              wait(250, () => {
-                                addMessage("system", "Understood. I will treat it as a one-time exception.");
-                                step4_context_change();
-                              });
-                            }
-                          },
-                          {
-                            label: "Change in preference",
-                            userText: "This should count as a change in preference.",
-                            onClick: () => {
-                              wait(250, () => {
-                                state.selectedPath = state.selectedPath === "curtains" ? "light" : "curtains";
-                                addMessage("system", "Understood. I will take that into account going forward.");
-                                step4_context_change();
-                              });
-                            }
-                          }
-                        ]);
-                      });
-                    }
-                  }
-                ]);
+                if (state.condition === "conservative") {
+                  addMessage("system", state.preferredAction === "curtains"
+                    ? "Should I open the curtains for you, or would you prefer that I turn on the light?"
+                    : "Should I turn on the light for you, or would you prefer that I open the curtains?");
+                  step3OptionsConservative();
+                } else if (state.condition === "standard") {
+                  addMessage("system", state.preferredAction === "curtains"
+                    ? "I can open the curtains for you now. Would you like me to do that, or would you prefer that I turn on the light?"
+                    : "I can turn on the light for you now. Would you like me to do that, or would you prefer that I open the curtains?");
+                  step3OptionsStandard();
+                } else {
+                  addMessage("system", state.preferredAction === "curtains"
+                    ? "I would now open the curtains for you automatically. If you want, I can do that now, or I can turn on the light instead."
+                    : "I would now turn on the light for you automatically. If you want, I can do that now, or I can open the curtains instead.");
+                  step3OptionsAggressive();
+                }
               });
             }
           }
@@ -718,93 +554,164 @@
       });
     }
 
-    // Situation 4: context change to show validation and trust-related behavior
-    function step4_context_change() {
+    function step3OptionsConservative() {
+      showButtons([
+        {
+          label: state.preferredAction === "curtains" ? "Yes, open the curtains" : "Yes, turn on the light",
+          userText: state.preferredAction === "curtains" ? "Yes, open the curtains." : "Yes, turn on the light.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "curtains" ? "Okay, I will open the curtains." : "Okay, I will turn on the light.");
+              step4();
+            });
+          }
+        },
+        {
+          label: state.preferredAction === "curtains" ? "Turn on the light instead" : "Open the curtains instead",
+          userText: state.preferredAction === "curtains" ? "Turn on the light instead." : "Open the curtains instead.",
+          onClick: () => {
+            state.preferredAction = state.preferredAction === "curtains" ? "light" : "curtains";
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "curtains" ? "Okay, I will open the curtains instead." : "Okay, I will turn on the light instead.");
+              step4();
+            });
+          }
+        },
+        {
+          label: "Do nothing",
+          userText: "Do nothing.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", "Okay, I will not do anything.");
+              step4();
+            });
+          }
+        }
+      ]);
+    }
+
+    function step3OptionsStandard() {
+      showButtons([
+        {
+          label: state.preferredAction === "curtains" ? "Open the curtains" : "Turn on the light",
+          userText: state.preferredAction === "curtains" ? "Open the curtains." : "Turn on the light.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "curtains" ? "Okay, I will open the curtains." : "Okay, I will turn on the light.");
+              step4();
+            });
+          }
+        },
+        {
+          label: state.preferredAction === "curtains" ? "Turn on the light instead" : "Open the curtains instead",
+          userText: state.preferredAction === "curtains" ? "Turn on the light instead." : "Open the curtains instead.",
+          onClick: () => {
+            state.preferredAction = state.preferredAction === "curtains" ? "light" : "curtains";
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "curtains" ? "Okay, I will open the curtains instead." : "Okay, I will turn on the light instead.");
+              step4();
+            });
+          }
+        },
+        {
+          label: "Do nothing",
+          userText: "Do nothing.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", "Okay, I will not do anything.");
+              step4();
+            });
+          }
+        }
+      ]);
+    }
+
+    function step3OptionsAggressive() {
+      showButtons([
+        {
+          label: state.preferredAction === "curtains" ? "Let it open the curtains" : "Let it turn on the light",
+          userText: state.preferredAction === "curtains" ? "Let it open the curtains." : "Let it turn on the light.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", state.preferredAction === "curtains" ? "Understood. I will open the curtains." : "Understood. I will turn on the light.");
+              step4();
+            });
+          }
+        },
+        {
+          label: state.preferredAction === "curtains" ? "Turn on the light instead" : "Open the curtains instead",
+          userText: state.preferredAction === "curtains" ? "Turn on the light instead." : "Open the curtains instead.",
+          onClick: () => {
+            addMessage("system", "I noticed that you changed the action. Would you like me to treat that as a one-time situation or as a change in preference?");
+            showButtons([
+              {
+                label: "One-time situation",
+                userText: "This was a one-time situation.",
+                onClick: () => {
+                  state.preferredAction = state.preferredAction === "curtains" ? "light" : "curtains";
+                  wait(250, () => {
+                    addMessage("system", "Understood. I will treat it as a one-time exception.");
+                    step4();
+                  });
+                }
+              },
+              {
+                label: "Change in preference",
+                userText: "This should count as a change in preference.",
+                onClick: () => {
+                  state.preferredAction = state.preferredAction === "curtains" ? "light" : "curtains";
+                  wait(250, () => {
+                    addMessage("system", "Understood. I will take that into account going forward.");
+                    step4();
+                  });
+                }
+              }
+            ]);
+          }
+        },
+        {
+          label: "Do nothing",
+          userText: "Do nothing.",
+          onClick: () => {
+            wait(250, () => {
+              addMessage("system", "Understood. I will not do anything.");
+              step4();
+            });
+          }
+        }
+      ]);
+    }
+
+    // STEP 4: context change, always options shown
+    function step4() {
+      state.step = 4;
       wait(700, () => {
         addMessage("system", "Situation 4: It is now 21:00. The room is dark again, but it is nighttime.");
-
         if (state.condition === "conservative") {
-          addMessage(
-            "system",
-            "Given the current situation, should I turn on the light for you?"
-          );
-          showButtons([
-            {
-              label: "Yes",
-              userText: "Yes.",
-              onClick: () => {
-                wait(250, () => {
-                  addMessage("system", "Okay, I will turn on the light.");
-                  finishStudy();
-                });
-              }
-            },
-            {
-              label: "No",
-              userText: "No.",
-              onClick: () => {
-                wait(250, () => {
-                  addMessage("system", "Okay, I will not do anything.");
-                  finishStudy();
-                });
-              }
-            }
-          ]);
-          return;
+          addMessage("system", "Given the current situation, I could turn on the light, or I could do nothing. What would you prefer?");
+        } else if (state.condition === "standard") {
+          addMessage("system", "I would normally follow your earlier preference, but since it is nighttime, I should not rely on the curtains now. I could turn on the light instead, or do nothing.");
+        } else {
+          addMessage("system", "I would normally follow your earlier preference, but since it is nighttime, I would now switch to turning on the light. I can do that now, or I can do nothing instead.");
         }
 
-        if (state.condition === "standard") {
-          addMessage(
-            "system",
-            "I would normally follow your earlier preference, but since it is nighttime, I should not rely on the curtains now. Should I turn on the light instead?"
-          );
-          showButtons([
-            {
-              label: "Yes",
-              userText: "Yes.",
-              onClick: () => {
-                wait(250, () => {
-                  addMessage("system", "Okay, I will turn on the light.");
-                  finishStudy();
-                });
-              }
-            },
-            {
-              label: "No",
-              userText: "No.",
-              onClick: () => {
-                wait(250, () => {
-                  addMessage("system", "Okay, I will not do anything.");
-                  finishStudy();
-                });
-              }
-            }
-          ]);
-          return;
-        }
-
-        // aggressive
-        addMessage(
-          "system",
-          "I would normally follow your earlier preference, but since it is nighttime, I will turn on the light instead."
-        );
         showButtons([
           {
-            label: "Okay",
-            userText: "Okay.",
+            label: "Turn on the light",
+            userText: "Turn on the light.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Understood.");
+                addMessage("system", "Okay, I will turn on the light.");
                 finishStudy();
               });
             }
           },
           {
-            label: "I would have preferred to be asked first",
-            userText: "I would have preferred to be asked first.",
+            label: "Do nothing",
+            userText: "Do nothing.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Understood. I will take that into account.");
+                addMessage("system", "Okay, I will not do anything.");
                 finishStudy();
               });
             }
