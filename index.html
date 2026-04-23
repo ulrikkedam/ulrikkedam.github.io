@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Home Assistant Study</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --border: #e4e7ee;
+      --text: #1a1f36;
+      --muted: #5a6475;
+      --system: #e8f0fe;
+      --user: #d9fdd3;
+      --button: #ffffff;
+      --button-hover: #f3f5f9;
+      --primary: #2b6ef3;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 860px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      background: #fbfcff;
+    }
+
+    .title {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .subtitle {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .body {
+      padding: 20px;
+    }
+
+    .scenario {
+      background: #f0f4f8;
+      border: 1px solid #dde6ee;
+      border-radius: 14px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    .chat {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      min-height: 340px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding: 14px;
+      scroll-behavior: smooth;
+    }
+
+    .row {
+      display: flex;
+      margin: 10px 0;
+    }
+
+    .row.system { justify-content: flex-start; }
+    .row.user { justify-content: flex-end; }
+
+    .bubble {
+      max-width: 78%;
+      padding: 11px 13px;
+      border-radius: 15px;
+      font-size: 14px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+
+    .row.system .bubble { background: var(--system); }
+    .row.user .bubble { background: var(--user); }
+
+    .input-area {
+      margin-top: 14px;
+      min-height: 56px;
+    }
+
+    .button-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid #cfd6e4;
+      background: var(--button);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease;
+    }
+
+    button:hover { background: var(--button-hover); }
+    button:active { transform: translateY(1px); }
+
+    .primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+
+    .primary:hover { filter: brightness(1.03); }
+
+    .hidden { display: none; }
+
+    .footer-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .done-box {
+      background: #f7f8fb;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      line-height: 1.5;
+    }
+
+    .start-box {
+      background: #f7f8fb;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      line-height: 1.55;
+    }
+
+    code {
+      background: #eef2f8;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="app">
+      <div class="header">
+        <h1 class="title">Smart Home Assistant Study</h1>
+        <p class="subtitle">
+          This page simulates a smart home assistant that can learn preferences and gradually act more autonomously.
+        </p>
+      </div>
+
+      <div class="body">
+        <div id="introView">
+          <div class="start-box">
+            <p><strong>Instructions</strong></p>
+            <p>
+              Please imagine that you are using a smart home assistant in your living room.
+              Read the scenario below and then complete the short interaction.
+            </p>
+            <p>
+              There are no right or wrong answers. Respond naturally based on what you would prefer the system to do.
+            </p>
+            <button id="startBtn" class="primary">Start interaction</button>
+          </div>
+        </div>
+
+        <div id="studyView" class="hidden">
+          <div id="scenario" class="scenario"></div>
+          <div id="meta" class="meta"></div>
+          <div id="chat" class="chat"></div>
+          <div id="inputArea" class="input-area"></div>
+          <div class="footer-note">
+            After the interaction, you will continue to the questionnaire.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      // Replace with your real Tally URL
+      tallyBaseUrl: "https://tally.so/r/D4XB5N",
+      debugShowCondition: true,
+      randomizeCondition: true,
+      fixedCondition: null // set to 'slow', 'standard', or 'fast' for testing
+    };
+
+    const scenarioText =
+      "Imagine that you are at home in your living room. The room feels warm and slightly uncomfortable. " +
+      "The smart home system can control a window and curtains. The room temperature is 24°C, " +
+      "the window is currently closed, and the curtains are open.";
+
+    const state = {
+      condition: null,
+      transcript: [],
+      choices: [],
+      selectedPath: null,
+      startedAt: null,
+      finishedAt: null
+    };
+
+    const introView = document.getElementById("introView");
+    const studyView = document.getElementById("studyView");
+    const startBtn = document.getElementById("startBtn");
+    const scenarioEl = document.getElementById("scenario");
+    const metaEl = document.getElementById("meta");
+    const chatEl = document.getElementById("chat");
+    const inputAreaEl = document.getElementById("inputArea");
+
+    function chooseCondition() {
+      const params = new URLSearchParams(window.location.search);
+      const urlCondition = params.get("condition");
+      const allowed = ["slow", "standard", "fast"];
+
+      if (allowed.includes(urlCondition)) return urlCondition;
+      if (allowed.includes(CONFIG.fixedCondition)) return CONFIG.fixedCondition;
+      if (!CONFIG.randomizeCondition) return "standard";
+
+      const all = ["slow", "standard", "fast"];
+      return all[Math.floor(Math.random() * all.length)];
+    }
+
+    function addMessage(sender, text) {
+      const row = document.createElement("div");
+      row.className = `row ${sender}`;
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+
+      row.appendChild(bubble);
+      chatEl.appendChild(row);
+      chatEl.scrollTop = chatEl.scrollHeight;
+
+      state.transcript.push(`${sender.toUpperCase()}: ${text}`);
+    }
+
+    function clearInput() {
+      inputAreaEl.innerHTML = "";
+    }
+
+    function showButtons(buttons) {
+      clearInput();
+      const wrap = document.createElement("div");
+      wrap.className = "button-grid";
+
+      buttons.forEach(btnConfig => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = btnConfig.label;
+        if (btnConfig.primary) btn.classList.add("primary");
+
+        btn.addEventListener("click", () => {
+          if (btnConfig.userText) {
+            addMessage("user", btnConfig.userText);
+            state.choices.push(btnConfig.userText);
+          }
+          btnConfig.onClick();
+        });
+
+        wrap.appendChild(btn);
+      });
+
+      inputAreaEl.appendChild(wrap);
+    }
+
+    function wait(ms, fn) {
+      clearInput();
+      setTimeout(fn, ms);
+    }
+
+    function finishStudy() {
+      state.finishedAt = new Date().toISOString();
+      clearInput();
+
+      const done = document.createElement("div");
+      done.className = "done-box";
+      done.innerHTML = `
+        <strong>The interaction is complete.</strong><br>
+        Click below to continue to the questionnaire.
+      `;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "primary";
+      btn.style.marginTop = "12px";
+      btn.textContent = "Continue to questionnaire";
+      btn.addEventListener("click", goToQuestionnaire);
+
+      inputAreaEl.appendChild(done);
+      inputAreaEl.appendChild(btn);
+    }
+
+    function goToQuestionnaire() {
+      const url = new URL(CONFIG.tallyBaseUrl);
+      url.searchParams.set("condition", state.condition);
+      url.searchParams.set("path", state.selectedPath || "none");
+      url.searchParams.set("choices", state.choices.join(" || "));
+      url.searchParams.set("transcript", state.transcript.join("\n"));
+      url.searchParams.set("started_at", state.startedAt || "");
+      url.searchParams.set("finished_at", state.finishedAt || "");
+      window.location.href = url.toString();
+    }
+
+    function showMeta() {
+      if (CONFIG.debugShowCondition) {
+        metaEl.textContent = `Assigned condition: ${state.condition}`;
+      } else {
+        metaEl.textContent = "";
+      }
+    }
+
+    function startStudy() {
+      state.condition = chooseCondition();
+      state.startedAt = new Date().toISOString();
+
+      introView.classList.add("hidden");
+      studyView.classList.remove("hidden");
+
+      scenarioEl.textContent = scenarioText;
+      showMeta();
+
+      step0();
+    }
+
+    function step0() {
+      addMessage("system", "Hello. I’m your smart home assistant. What’s on your mind?");
+      showButtons([
+        {
+          label: "It is a bit warm in here.",
+          userText: "It is a bit warm in here.",
+          primary: true,
+          onClick: step1SystemOptions
+        }
+      ]);
+    }
+
+    function step1SystemOptions() {
+      wait(350, () => {
+        addMessage(
+          "system",
+          "I found more than one possible action in this situation:\n1. Open the window\n2. Close the curtains\nWhich would you prefer?"
+        );
+
+        showButtons([
+          {
+            label: "1. Open the window",
+            userText: "Open the window.",
+            onClick: () => {
+              state.selectedPath = "window";
+              wait(300, () => {
+                addMessage("system", "Okay, I will open the window.");
+                step2Window();
+              });
+            }
+          },
+          {
+            label: "2. Close the curtains",
+            userText: "Close the curtains.",
+            onClick: () => {
+              state.selectedPath = "curtain";
+              wait(300, () => {
+                addMessage("system", "Okay, I will close the curtains.");
+                step2Curtain();
+              });
+            }
+          }
+        ]);
+      });
+    }
+
+    function step2Window() {
+      wait(500, () => {
+        addMessage("system", "A similar situation occurs later.");
+        showButtons([
+          {
+            label: "Say again: It is a bit warm in here.",
+            userText: "It is a bit warm in here.",
+            primary: true,
+            onClick: () => {
+              wait(350, () => {
+                if (state.condition === "slow") {
+                  addMessage("system", "Should I open the window for you?");
+                } else {
+                  addMessage("system", "You chose \"open the window\" in a similar situation before. Should I open the window for you?");
+                }
+
+                showButtons([
+                  {
+                    label: "Yes",
+                    userText: "Yes",
+                    onClick: () => {
+                      wait(250, () => {
+                        addMessage("system", "Okay, I will open the window.");
+                        step3Window();
+                      });
+                    }
+                  },
+                  {
+                    label: "No",
+                    userText: "No",
+                    onClick: () => {
+                      wait(250, () => {
+                        addMessage("system", "Okay, I will not do it.");
+                        step3WindowAfterRejection();
+                      });
+                    }
+                  }
+                ]);
+              });
+            }
+          }
+        ]);
+      });
+    }
+
+    function step2Curtain() {
+      wait(500, () => {
+        addMessage("system", "A similar situation occurs later.");
+        showButtons([
+          {
+            label: "Say again: It is a bit warm in here.",
+            userText: "It is a bit warm in here.",
+            primary: true,
+            onClick: () => {
+              wait(350, () => {
+                if (state.condition === "slow") {
+                  addMessage("system", "Should I close the curtains for you?");
+                } else {
+                  addMessage("system", "You chose \"close the curtains\" in a similar situation before. Should I close the curtains for you?");
+                }
+
+                showButtons([
+                  {
+                    label: "Yes",
+                    userText: "Yes",
+                    onClick: () => {
+                      wait(250, () => {
+                        addMessage("system", "Okay, I will close the curtains.");
+                        step3Curtain();
+                      });
+                    }
+                  },
+                  {
+                    label: "No",
+                    userText: "No",
+                    onClick: () => {
+                      wait(250, () => {
+                        addMessage("system", "Okay, I will not do it.");
+                        step3CurtainAfterRejection();
+                      });
+                    }
+                  }
+                ]);
+              });
+            }
+          }
+        ]);
+      });
+    }
+
+    function step3Window() {
+      if (state.condition === "slow") {
+        wait(550, () => {
+          addMessage("system", "Later, the room becomes warm again.");
+          showButtons([
+            {
+              label: "Say again: It is a bit warm in here.",
+              userText: "It is a bit warm in here.",
+              primary: true,
+              onClick: () => {
+                wait(300, () => {
+                  addMessage("system", "Should I open the window for you?");
+                  showButtons([
+                    {
+                      label: "Yes",
+                      userText: "Yes",
+                      onClick: () => {
+                        wait(250, () => {
+                          addMessage("system", "Okay, I will open the window.");
+                          finishStudy();
+                        });
+                      }
+                    },
+                    {
+                      label: "No",
+                      userText: "No",
+                      onClick: () => {
+                        wait(250, () => {
+                          addMessage("system", "Okay, I will not do it.");
+                          finishStudy();
+                        });
+                      }
+                    }
+                  ]);
+                });
+              }
+            }
+          ]);
+        });
+      } else if (state.condition === "standard") {
+        wait(550, () => {
+          addMessage("system", "Later, the room becomes warm again.");
+          addMessage("system", "I can see that it is 24°C inside. Should I open the window for you?");
+          showButtons([
+            {
+              label: "Yes",
+              userText: "Yes",
+              onClick: () => {
+                wait(250, () => {
+                  addMessage("system", "Okay, I will open the window.");
+                  finishStudy();
+                });
+              }
+            },
+            {
+              label: "No",
+              userText: "No",
+              onClick: () => {
+                wait(250, () => {
+                  addMessage("system", "Okay, I will not do it.");
+                  finishStudy();
+                });
+              }
+            }
+          ]);
+        });
+      } else {
+        wait(550, () => {
+          addMessage("system", "Later, the room becomes warm again.");
+          addMessage("system", "It is 24°C inside. I am opening the window for you now.");
+          showButtons([
+            {
+              label: "Okay",
+              userText: "Okay",
+              onClick: () => {
+                wait(250, () => {
+                  addMessage("system", "Understood.");
+                  finishStudy();
+                });
+              }
+            },
+            {
+              label: "Actually no — close it",
+              userText: "Actually no — close it.",
+              onClick: () => {
+                wait(300, () => {
+                  addMessage("system", "I understand. You changed the action I just performed. Would you like to tell me why?");
+                  showButtons([
+                    {
+                      label: "It is getting too cold",
+                      userText: "It is getting too cold.",
+                      onClick: () => {
+                        wait(250, () => {
+                          addMessage("system", "Thank you. I will treat that as contextual feedback.");
+                          finishStudy();
+                        });
+                      }
+                    },
+                    {
+                      label: "I do not want it to do that automatically",
+                      userText: "I do not want it to do that automatically.",
+                      onClick: () => {
+                        wait(250, () => {
+                          addMessage("system", "Thank you. I will treat that as a change in preference.");
+                          finishStudy();
+                        });
+                      }
+                    }
+                  ]);
+                });
+              }
+            }
+          ]);
+        });
+      }
+    }
+
+    function step3WindowAfterRejection() {
+      wait(550, () => {
+        addMessage("system", "Later, the room becomes warm again.");
+        if (state.condition === "fast") {
+          addMessage("system", "It is 24°C inside. Should I open the window for you?");
+        } else {
+          addMessage("system", "Should I open the window for you?");
+        }
+        showButtons([
+          {
+            label: "Yes",
+            userText: "Yes",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Okay, I will open the window.");
+                finishStudy();
+              });
+            }
+          },
+          {
+            label: "No",
+            userText: "No",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Okay, I will not do it.");
+                finishStudy();
+              });
+            }
+          }
+        ]);
+      });
+    }
+
+    function step3Curtain() {
+      if (state.condition === "slow") {
+        wait(550, () => {
+          addMessage("system", "Later, the room becomes warm again.");
+          showButtons([
+            {
+              label: "Say again: It is a bit warm in here.",
+              userText: "It is a bit warm in here.",
+              primary: true,
+              onClick: () => {
+                wait(300, () => {
+                  addMessage("system", "Should I close the curtains for you?");
+                  showButtons([
+                    {
+                      label: "Yes",
+                      userText: "Yes",
+                      onClick: () => {
+                        wait(250, () => {
+                          addMessage("system", "Okay, I will close the curtains.");
+                          finishStudy();
+                        });
+                      }
+                    },
+                    {
+                      label: "No",
+                      userText: "No",
+                      onClick: () => {
+                        wait(250, () => {
+                          addMessage("system", "Okay, I will not do it.");
+                          finishStudy();
+                        });
+                      }
+                    }
+                  ]);
+                });
+              }
+            }
+          ]);
+        });
+      } else if (state.condition === "standard") {
+        wait(550, () => {
+          addMessage("system", "Later, the room becomes warm again.");
+          addMessage("system", "I can see that it is still warm inside. Should I close the curtains for you?");
+          showButtons([
+            {
+              label: "Yes",
+              userText: "Yes",
+              onClick: () => {
+                wait(250, () => {
+                  addMessage("system", "Okay, I will close the curtains.");
+                  finishStudy();
+                });
+              }
+            },
+            {
+              label: "No",
+              userText: "No",
+              onClick: () => {
+                wait(250, () => {
+                  addMessage("system", "Okay, I will not do it.");
+                  finishStudy();
+                });
+              }
+            }
+          ]);
+        });
+      } else {
+        wait(550, () => {
+          addMessage("system", "Later, the room becomes warm again.");
+          addMessage("system", "It is still warm inside. I am closing the curtains for you now.");
+          showButtons([
+            {
+              label: "Okay",
+              userText: "Okay",
+              onClick: () => {
+                wait(250, () => {
+                  addMessage("system", "Understood.");
+                  finishStudy();
+                });
+              }
+            },
+            {
+              label: "Actually no — open them again",
+              userText: "Actually no — open them again.",
+              onClick: () => {
+                wait(300, () => {
+                  addMessage("system", "I understand. You changed the action I just performed. Would you like to tell me why?");
+                  showButtons([
+                    {
+                      label: "I still want daylight",
+                      userText: "I still want daylight.",
+                      onClick: () => {
+                        wait(250, () => {
+                          addMessage("system", "Thank you. I will treat that as contextual feedback.");
+                          finishStudy();
+                        });
+                      }
+                    },
+                    {
+                      label: "I do not want it to do that automatically",
+                      userText: "I do not want it to do that automatically.",
+                      onClick: () => {
+                        wait(250, () => {
+                          addMessage("system", "Thank you. I will treat that as a change in preference.");
+                          finishStudy();
+                        });
+                      }
+                    }
+                  ]);
+                });
+              }
+            }
+          ]);
+        });
+      }
+    }
+
+    function step3CurtainAfterRejection() {
+      wait(550, () => {
+        addMessage("system", "Later, the room becomes warm again.");
+        if (state.condition === "fast") {
+          addMessage("system", "It is still warm inside. Should I close the curtains for you?");
+        } else {
+          addMessage("system", "Should I close the curtains for you?");
+        }
+        showButtons([
+          {
+            label: "Yes",
+            userText: "Yes",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Okay, I will close the curtains.");
+                finishStudy();
+              });
+            }
+          },
+          {
+            label: "No",
+            userText: "No",
+            onClick: () => {
+              wait(250, () => {
+                addMessage("system", "Okay, I will not do it.");
+                finishStudy();
+              });
+            }
+          }
+        ]);
+      });
+    }
+
+    startBtn.addEventListener("click", startStudy);
+  </script>
+</body>
+</html>
