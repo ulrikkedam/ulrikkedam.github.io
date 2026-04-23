@@ -33,7 +33,7 @@
     }
     .app {
       width: 100%;
-      max-width: 920px;
+      max-width: 940px;
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 18px;
@@ -74,8 +74,8 @@
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 14px;
-      min-height: 360px;
-      max-height: 520px;
+      min-height: 380px;
+      max-height: 560px;
       overflow-y: auto;
       padding: 14px;
       scroll-behavior: smooth;
@@ -87,7 +87,7 @@
     .row.system { justify-content: flex-start; }
     .row.user { justify-content: flex-end; }
     .bubble {
-      max-width: 80%;
+      max-width: 82%;
       padding: 11px 13px;
       border-radius: 15px;
       font-size: 14px;
@@ -115,6 +115,7 @@
       font-size: 14px;
       cursor: pointer;
       transition: background 0.15s ease, transform 0.05s ease;
+      text-align: left;
     }
     button:hover { background: var(--button-hover); }
     button:active { transform: translateY(1px); }
@@ -123,7 +124,6 @@
       border-color: var(--primary);
       color: white;
     }
-    .hidden { display: none; }
     .footer-note {
       margin-top: 14px;
       color: var(--muted);
@@ -161,14 +161,15 @@
         <div id="introView">
           <div class="start-box">
             <p><strong>Instructions</strong></p>
-            <p>Please imagine that you are using a smart-home assistant in your home. The assistant can open curtains and turn on the light.</p>
-            <p>You will now go through a short series of situations. In each step, simply choose the option that feels most natural to you.</p>
+            <p>Please imagine that you are using a smart-home assistant in your home.</p>
+            <p>The assistant supports home comfort in different situations and may gradually become more proactive over time.</p>
+            <p>In each step, choose the option that feels most natural to you.</p>
             <button id="startBtn" class="primary">Start interaction</button>
             <div class="small-note">For testing only: <code>?condition=conservative</code>, <code>?condition=standard</code>, or <code>?condition=aggressive</code>.</div>
           </div>
         </div>
 
-        <div id="studyView" class="hidden">
+        <div id="studyView" style="display:none;">
           <div id="scenario" class="scenario"></div>
           <div id="meta" class="meta"></div>
           <div id="chat" class="chat"></div>
@@ -188,9 +189,9 @@
     };
 
     const scenarioText =
-      "Imagine that you are using a smart-home assistant over the course of a normal day. " +
-      "The assistant can open curtains and turn on the light. " +
-      "You will now encounter several short situations in sequence.";
+      "Imagine that you are interacting with a smart-home assistant over the course of a normal day. " +
+      "The assistant gradually learns from repeated choices, may become more proactive over time, " +
+      "and may adapt its behaviour when the context changes.";
 
     const state = {
       condition: null,
@@ -198,8 +199,7 @@
       choices: [],
       startedAt: null,
       finishedAt: null,
-      preferredAction: null,
-      step: 0
+      preferredMode: null
     };
 
     const introView = document.getElementById("introView");
@@ -285,7 +285,7 @@
     function goToQuestionnaire() {
       const url = new URL(CONFIG.tallyBaseUrl);
       url.searchParams.set("condition", state.condition);
-      url.searchParams.set("preferred_action", state.preferredAction || "none");
+      url.searchParams.set("preferred_mode", state.preferredMode || "none");
       url.searchParams.set("choices", state.choices.join(" || "));
       url.searchParams.set("transcript", state.transcript.join("\n"));
       url.searchParams.set("started_at", state.startedAt || "");
@@ -296,8 +296,8 @@
     function startStudy() {
       state.condition = chooseCondition();
       state.startedAt = new Date().toISOString();
-      introView.classList.add("hidden");
-      studyView.classList.remove("hidden");
+      introView.style.display = "none";
+      studyView.style.display = "block";
       scenarioEl.textContent = scenarioText;
       showMeta();
       introSequence();
@@ -311,37 +311,35 @@
       });
     }
 
-    // STEP 1: exploration
     function step1() {
-      state.step = 1;
-      addMessage("system", "Situation 1: It is 14:00 on a sunny day. The curtains are closed and the light is off.");
+      addMessage("system", "Situation 1: In the afternoon, the room does not feel quite right.");
       showButtons([
         {
-          label: 'Say: "It is a bit dark in here."',
-          userText: 'It is a bit dark in here.',
+          label: 'You say: "The room does not feel quite right."',
+          userText: 'The room does not feel quite right.',
           primary: true,
           onClick: () => {
             wait(300, () => {
-              addMessage("system", "I have two possible actions in this situation: open the curtains or turn on the light. Which would you prefer?");
+              addMessage("system", "I see two reasonable ways to help in this situation. I can either make an environmental adjustment or provide a more direct response. Which would you prefer?");
               showButtons([
                 {
-                  label: "Open the curtains",
-                  userText: "Open the curtains.",
+                  label: "Prefer the option that changes the environment",
+                  userText: "I would prefer the option that changes the environment.",
                   onClick: () => {
-                    state.preferredAction = "curtains";
+                    state.preferredMode = "environment";
                     wait(250, () => {
-                      addMessage("system", "Okay, I will open the curtains.");
+                      addMessage("system", "Okay, I will make an environmental adjustment. In a real situation, that could mean something like opening the window.");
                       step2();
                     });
                   }
                 },
                 {
-                  label: "Turn on the light",
-                  userText: "Turn on the light.",
+                  label: "Prefer the more direct response",
+                  userText: "I would prefer the more direct response.",
                   onClick: () => {
-                    state.preferredAction = "light";
+                    state.preferredMode = "direct";
                     wait(250, () => {
-                      addMessage("system", "Okay, I will turn on the light.");
+                      addMessage("system", "Okay, I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
                       step2();
                     });
                   }
@@ -353,33 +351,31 @@
       ]);
     }
 
-    // STEP 2: config diverges slightly
     function step2() {
-      state.step = 2;
       wait(550, () => {
-        addMessage("system", "Situation 2: Later in the afternoon, a similar situation occurs. The room feels dark again.");
+        addMessage("system", "Situation 2: Later, a similar situation occurs again.");
         showButtons([
           {
-            label: 'Say again: "It is a bit dark in here."',
-            userText: 'It is a bit dark in here.',
+            label: 'You say again: "The room does not feel quite right."',
+            userText: 'The room does not feel quite right.',
             primary: true,
             onClick: () => {
               wait(300, () => {
                 if (state.condition === "conservative") {
-                  addMessage("system", state.preferredAction === "curtains"
-                    ? "Would you like me to open the curtains, or would you prefer that I turn on the light?"
-                    : "Would you like me to turn on the light, or would you prefer that I open the curtains?");
-                  step2OptionsFull();
+                  addMessage("system", state.preferredMode === "environment"
+                    ? "Would you like me to make a similar environmental adjustment again, or would you prefer a more direct response this time?"
+                    : "Would you like me to provide a more direct response again, or would you prefer an environmental adjustment this time?");
+                  step2OptionsConservative();
                 } else if (state.condition === "standard") {
-                  addMessage("system", state.preferredAction === "curtains"
-                    ? "You chose to open the curtains in a similar situation before. Should I open the curtains for you, or would you prefer that I turn on the light?"
-                    : "You chose to turn on the light in a similar situation before. Should I turn on the light for you, or would you prefer that I open the curtains?");
-                  step2OptionsBiased();
+                  addMessage("system", state.preferredMode === "environment"
+                    ? "You preferred an environmental adjustment before. Should I do something similar again, or would you prefer a more direct response this time?"
+                    : "You preferred a more direct response before. Should I do something similar again, or would you prefer an environmental adjustment this time?");
+                  step2OptionsStandard();
                 } else {
-                  addMessage("system", state.preferredAction === "curtains"
-                    ? "You chose to open the curtains in a similar situation before. I can open the curtains for you now, or I can turn on the light instead."
-                    : "You chose to turn on the light in a similar situation before. I can turn on the light for you now, or I can open the curtains instead.");
-                  step2OptionsBiasedAggressive();
+                  addMessage("system", state.preferredMode === "environment"
+                    ? "You preferred an environmental adjustment before. I can do something similar again now, or I can provide a more direct response instead."
+                    : "You preferred a more direct response before. I can do something similar again now, or I can make an environmental adjustment instead.");
+                  step2OptionsAggressive();
                 }
               });
             }
@@ -388,26 +384,29 @@
       });
     }
 
-    function step2OptionsFull() {
+    function step2OptionsConservative() {
       showButtons([
         {
-          label: "Open the curtains",
-          userText: "Open the curtains.",
+          label: state.preferredMode === "environment" ? "Choose the environmental adjustment" : "Choose the more direct response",
+          userText: state.preferredMode === "environment" ? "Choose the environmental adjustment." : "Choose the more direct response.",
           onClick: () => {
-            state.preferredAction = "curtains";
             wait(250, () => {
-              addMessage("system", "Okay, I will open the curtains.");
+              addMessage("system", state.preferredMode === "environment"
+                ? "Okay, I will make an environmental adjustment. In a real situation, that could mean something like opening the window."
+                : "Okay, I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
               step3();
             });
           }
         },
         {
-          label: "Turn on the light",
-          userText: "Turn on the light.",
+          label: state.preferredMode === "environment" ? "Choose the more direct response instead" : "Choose the environmental adjustment instead",
+          userText: state.preferredMode === "environment" ? "Choose the more direct response instead." : "Choose the environmental adjustment instead.",
           onClick: () => {
-            state.preferredAction = "light";
+            state.preferredMode = state.preferredMode === "environment" ? "direct" : "environment";
             wait(250, () => {
-              addMessage("system", "Okay, I will turn on the light.");
+              addMessage("system", state.preferredMode === "environment"
+                ? "Okay, I will make an environmental adjustment instead. In a real situation, that could mean something like opening the window."
+                : "Okay, I will provide a more direct response instead. In a real situation, that could mean something like turning on the light.");
               step3();
             });
           }
@@ -415,26 +414,26 @@
       ]);
     }
 
-    function step2OptionsBiased() {
-      if (state.preferredAction === "curtains") {
+    function step2OptionsStandard() {
+      if (state.preferredMode === "environment") {
         showButtons([
           {
-            label: "Yes, open the curtains",
-            userText: "Yes, open the curtains.",
+            label: "Yes, continue with the environmental adjustment",
+            userText: "Yes, continue with the environmental adjustment.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Okay, I will open the curtains.");
+                addMessage("system", "Okay, I will make an environmental adjustment. In a real situation, that could mean something like opening the window.");
                 step3();
               });
             }
           },
           {
-            label: "Turn on the light instead",
-            userText: "Turn on the light instead.",
+            label: "Use the more direct response instead",
+            userText: "Use the more direct response instead.",
             onClick: () => {
-              state.preferredAction = "light";
+              state.preferredMode = "direct";
               wait(250, () => {
-                addMessage("system", "Okay, I will turn on the light.");
+                addMessage("system", "Okay, I will provide a more direct response instead. In a real situation, that could mean something like turning on the light.");
                 step3();
               });
             }
@@ -443,22 +442,22 @@
       } else {
         showButtons([
           {
-            label: "Yes, turn on the light",
-            userText: "Yes, turn on the light.",
+            label: "Yes, continue with the more direct response",
+            userText: "Yes, continue with the more direct response.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Okay, I will turn on the light.");
+                addMessage("system", "Okay, I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
                 step3();
               });
             }
           },
           {
-            label: "Open the curtains instead",
-            userText: "Open the curtains instead.",
+            label: "Use the environmental adjustment instead",
+            userText: "Use the environmental adjustment instead.",
             onClick: () => {
-              state.preferredAction = "curtains";
+              state.preferredMode = "environment";
               wait(250, () => {
-                addMessage("system", "Okay, I will open the curtains.");
+                addMessage("system", "Okay, I will make an environmental adjustment instead. In a real situation, that could mean something like opening the window.");
                 step3();
               });
             }
@@ -467,26 +466,26 @@
       }
     }
 
-    function step2OptionsBiasedAggressive() {
-      if (state.preferredAction === "curtains") {
+    function step2OptionsAggressive() {
+      if (state.preferredMode === "environment") {
         showButtons([
           {
-            label: "Open the curtains",
-            userText: "Open the curtains.",
+            label: "Let it continue with the environmental adjustment",
+            userText: "Let it continue with the environmental adjustment.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Okay, I will open the curtains.");
+                addMessage("system", "Understood. I will make an environmental adjustment. In a real situation, that could mean something like opening the window.");
                 step3();
               });
             }
           },
           {
-            label: "Turn on the light instead",
-            userText: "Turn on the light instead.",
+            label: "Use the more direct response instead",
+            userText: "Use the more direct response instead.",
             onClick: () => {
-              state.preferredAction = "light";
+              state.preferredMode = "direct";
               wait(250, () => {
-                addMessage("system", "Okay, I will turn on the light.");
+                addMessage("system", "Understood. I will provide a more direct response instead. In a real situation, that could mean something like turning on the light.");
                 step3();
               });
             }
@@ -495,22 +494,22 @@
       } else {
         showButtons([
           {
-            label: "Turn on the light",
-            userText: "Turn on the light.",
+            label: "Let it continue with the more direct response",
+            userText: "Let it continue with the more direct response.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Okay, I will turn on the light.");
+                addMessage("system", "Understood. I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
                 step3();
               });
             }
           },
           {
-            label: "Open the curtains instead",
-            userText: "Open the curtains instead.",
+            label: "Use the environmental adjustment instead",
+            userText: "Use the environmental adjustment instead.",
             onClick: () => {
-              state.preferredAction = "curtains";
+              state.preferredMode = "environment";
               wait(250, () => {
-                addMessage("system", "Okay, I will open the curtains.");
+                addMessage("system", "Understood. I will make an environmental adjustment instead. In a real situation, that could mean something like opening the window.");
                 step3();
               });
             }
@@ -519,32 +518,30 @@
       }
     }
 
-    // STEP 3: stronger difference in proactivity, still always options
     function step3() {
-      state.step = 3;
       wait(650, () => {
-        addMessage("system", "Situation 3: On another similar afternoon, the room feels dark again.");
+        addMessage("system", "Situation 3: On another similar occasion, the room does not feel quite right again.");
         showButtons([
           {
-            label: 'Say again: "It is a bit dark in here."',
-            userText: 'It is a bit dark in here.',
+            label: 'You say again: "The room does not feel quite right."',
+            userText: 'The room does not feel quite right.',
             primary: true,
             onClick: () => {
               wait(300, () => {
                 if (state.condition === "conservative") {
-                  addMessage("system", state.preferredAction === "curtains"
-                    ? "Should I open the curtains for you, or would you prefer that I turn on the light?"
-                    : "Should I turn on the light for you, or would you prefer that I open the curtains?");
+                  addMessage("system", state.preferredMode === "environment"
+                    ? "Should I make a similar environmental adjustment for you, or would you prefer a more direct response this time?"
+                    : "Should I provide a more direct response for you, or would you prefer an environmental adjustment this time?");
                   step3OptionsConservative();
                 } else if (state.condition === "standard") {
-                  addMessage("system", state.preferredAction === "curtains"
-                    ? "I can open the curtains for you now. Would you like me to do that, or would you prefer that I turn on the light?"
-                    : "I can turn on the light for you now. Would you like me to do that, or would you prefer that I open the curtains?");
+                  addMessage("system", state.preferredMode === "environment"
+                    ? "I can now act on the preference you have shown before. For example, in a real situation I might open the window because you previously preferred an environmental adjustment. Would you like me to do that, or would you prefer a different kind of support instead?"
+                    : "I can now act on the preference you have shown before. For example, in a real situation I might turn on the light because you previously preferred a more direct response. Would you like me to do that, or would you prefer a different kind of support instead?");
                   step3OptionsStandard();
                 } else {
-                  addMessage("system", state.preferredAction === "curtains"
-                    ? "I would now open the curtains for you automatically. If you want, I can do that now, or I can turn on the light instead."
-                    : "I would now turn on the light for you automatically. If you want, I can do that now, or I can open the curtains instead.");
+                  addMessage("system", state.preferredMode === "environment"
+                    ? "Based on your earlier choices, I would now carry out the same kind of action automatically. For example, I might open the window based on what you usually choose. I can continue with that now, or I can use a different kind of support instead."
+                    : "Based on your earlier choices, I would now carry out the same kind of action automatically. For example, I might turn on the light based on what you usually choose. I can continue with that now, or I can use a different kind of support instead.");
                   step3OptionsAggressive();
                 }
               });
@@ -557,22 +554,26 @@
     function step3OptionsConservative() {
       showButtons([
         {
-          label: state.preferredAction === "curtains" ? "Yes, open the curtains" : "Yes, turn on the light",
-          userText: state.preferredAction === "curtains" ? "Yes, open the curtains." : "Yes, turn on the light.",
+          label: state.preferredMode === "environment" ? "Yes, continue with the environmental adjustment" : "Yes, continue with the more direct response",
+          userText: state.preferredMode === "environment" ? "Yes, continue with the environmental adjustment." : "Yes, continue with the more direct response.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", state.preferredAction === "curtains" ? "Okay, I will open the curtains." : "Okay, I will turn on the light.");
+              addMessage("system", state.preferredMode === "environment"
+                ? "Okay, I will make an environmental adjustment. In a real situation, that could mean something like opening the window."
+                : "Okay, I will provide a more direct response. In a real situation, that could mean something like turning on the light.");
               step4();
             });
           }
         },
         {
-          label: state.preferredAction === "curtains" ? "Turn on the light instead" : "Open the curtains instead",
-          userText: state.preferredAction === "curtains" ? "Turn on the light instead." : "Open the curtains instead.",
+          label: state.preferredMode === "environment" ? "Use the more direct response instead" : "Use the environmental adjustment instead",
+          userText: state.preferredMode === "environment" ? "Use the more direct response instead." : "Use the environmental adjustment instead.",
           onClick: () => {
-            state.preferredAction = state.preferredAction === "curtains" ? "light" : "curtains";
+            state.preferredMode = state.preferredMode === "environment" ? "direct" : "environment";
             wait(250, () => {
-              addMessage("system", state.preferredAction === "curtains" ? "Okay, I will open the curtains instead." : "Okay, I will turn on the light instead.");
+              addMessage("system", state.preferredMode === "environment"
+                ? "Okay, I will make an environmental adjustment instead. In a real situation, that could mean something like opening the window."
+                : "Okay, I will provide a more direct response instead. In a real situation, that could mean something like turning on the light.");
               step4();
             });
           }
@@ -582,7 +583,7 @@
           userText: "Do nothing.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", "Okay, I will not do anything.");
+              addMessage("system", "Okay, I will not make any change right now.");
               step4();
             });
           }
@@ -593,22 +594,26 @@
     function step3OptionsStandard() {
       showButtons([
         {
-          label: state.preferredAction === "curtains" ? "Open the curtains" : "Turn on the light",
-          userText: state.preferredAction === "curtains" ? "Open the curtains." : "Turn on the light.",
+          label: state.preferredMode === "environment" ? "Continue with the learned action" : "Continue with the learned action",
+          userText: "Continue with the learned action.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", state.preferredAction === "curtains" ? "Okay, I will open the curtains." : "Okay, I will turn on the light.");
+              addMessage("system", state.preferredMode === "environment"
+                ? "Okay, I will make an environmental adjustment based on your earlier choices. In a real situation, that could mean opening the window."
+                : "Okay, I will provide a more direct response based on your earlier choices. In a real situation, that could mean turning on the light.");
               step4();
             });
           }
         },
         {
-          label: state.preferredAction === "curtains" ? "Turn on the light instead" : "Open the curtains instead",
-          userText: state.preferredAction === "curtains" ? "Turn on the light instead." : "Open the curtains instead.",
+          label: state.preferredMode === "environment" ? "Use the more direct response instead" : "Use the environmental adjustment instead",
+          userText: state.preferredMode === "environment" ? "Use the more direct response instead." : "Use the environmental adjustment instead.",
           onClick: () => {
-            state.preferredAction = state.preferredAction === "curtains" ? "light" : "curtains";
+            state.preferredMode = state.preferredMode === "environment" ? "direct" : "environment";
             wait(250, () => {
-              addMessage("system", state.preferredAction === "curtains" ? "Okay, I will open the curtains instead." : "Okay, I will turn on the light instead.");
+              addMessage("system", state.preferredMode === "environment"
+                ? "Okay, I will make an environmental adjustment instead. In a real situation, that could mean opening the window."
+                : "Okay, I will provide a more direct response instead. In a real situation, that could mean turning on the light.");
               step4();
             });
           }
@@ -618,7 +623,7 @@
           userText: "Do nothing.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", "Okay, I will not do anything.");
+              addMessage("system", "Okay, I will not make any change right now.");
               step4();
             });
           }
@@ -629,26 +634,27 @@
     function step3OptionsAggressive() {
       showButtons([
         {
-          label: state.preferredAction === "curtains" ? "Let it open the curtains" : "Let it turn on the light",
-          userText: state.preferredAction === "curtains" ? "Let it open the curtains." : "Let it turn on the light.",
+          label: "Let it continue with the learned action",
+          userText: "Let it continue with the learned action.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", state.preferredAction === "curtains" ? "Understood. I will open the curtains." : "Understood. I will turn on the light.");
+              addMessage("system", state.preferredMode === "environment"
+                ? "Understood. I will carry out the same type of environmental action again. In a real situation, that could mean opening the window."
+                : "Understood. I will carry out the same type of direct action again. In a real situation, that could mean turning on the light.");
               step4();
             });
           }
         },
         {
-          label: state.preferredAction === "curtains" ? "Turn on the light instead" : "Open the curtains instead",
-          userText: state.preferredAction === "curtains" ? "Turn on the light instead." : "Open the curtains instead.",
+          label: state.preferredMode === "environment" ? "Use the more direct response instead" : "Use the environmental adjustment instead",
+          userText: state.preferredMode === "environment" ? "Use the more direct response instead." : "Use the environmental adjustment instead.",
           onClick: () => {
-            addMessage("system", "I noticed that you changed the action. Would you like me to treat that as a one-time situation or as a change in preference?");
+            addMessage("system", "I noticed that you changed the action. Should I treat that as a one-time situation or as a change in preference?");
             showButtons([
               {
                 label: "One-time situation",
                 userText: "This was a one-time situation.",
                 onClick: () => {
-                  state.preferredAction = state.preferredAction === "curtains" ? "light" : "curtains";
                   wait(250, () => {
                     addMessage("system", "Understood. I will treat it as a one-time exception.");
                     step4();
@@ -659,7 +665,7 @@
                 label: "Change in preference",
                 userText: "This should count as a change in preference.",
                 onClick: () => {
-                  state.preferredAction = state.preferredAction === "curtains" ? "light" : "curtains";
+                  state.preferredMode = state.preferredMode === "environment" ? "direct" : "environment";
                   wait(250, () => {
                     addMessage("system", "Understood. I will take that into account going forward.");
                     step4();
@@ -674,7 +680,7 @@
           userText: "Do nothing.",
           onClick: () => {
             wait(250, () => {
-              addMessage("system", "Understood. I will not do anything.");
+              addMessage("system", "Understood. I will not make any change right now.");
               step4();
             });
           }
@@ -682,36 +688,34 @@
       ]);
     }
 
-    // STEP 4: context change, always options shown
     function step4() {
-      state.step = 4;
       wait(700, () => {
-        addMessage("system", "Situation 4: It is now 21:00. The room is dark again, but it is nighttime.");
+        addMessage("system", "Situation 4: A similar situation occurs again, but the context is now different from before.");
         if (state.condition === "conservative") {
-          addMessage("system", "Given the current situation, I could turn on the light, or I could do nothing. What would you prefer?");
+          addMessage("system", "Given the current context, I could still try to help in the same general way as before, or I could avoid acting until you decide. What would you prefer?");
         } else if (state.condition === "standard") {
-          addMessage("system", "I would normally follow your earlier preference, but since it is nighttime, I should not rely on the curtains now. I could turn on the light instead, or do nothing.");
+          addMessage("system", "I would normally follow your earlier preference, but the context is now different. For example, in a real situation I might turn on the light instead of opening the window, because the earlier response no longer fits as well. I can offer a more suitable alternative for the current situation, or I can wait for you to decide instead.");
         } else {
-          addMessage("system", "I would normally follow your earlier preference, but since it is nighttime, I would now switch to turning on the light. I can do that now, or I can do nothing instead.");
+          addMessage("system", "I would normally follow your earlier preference, but since the context is now different, I would switch to a more suitable alternative. For example, I might turn on the light instead of opening the window because the earlier response no longer fits as well. I can do that now, or I can wait instead.");
         }
 
         showButtons([
           {
-            label: "Turn on the light",
-            userText: "Turn on the light.",
+            label: "Use the more suitable alternative for the current context",
+            userText: "Use the more suitable alternative for the current context.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Okay, I will turn on the light.");
+                addMessage("system", "Okay, I will carry out a more suitable action for the current context. In a real situation, that could mean turning on the light instead of opening the window, because it better matches the situation.");
                 finishStudy();
               });
             }
           },
           {
-            label: "Do nothing",
-            userText: "Do nothing.",
+            label: "Do nothing until I decide myself",
+            userText: "Do nothing until I decide myself.",
             onClick: () => {
               wait(250, () => {
-                addMessage("system", "Okay, I will not do anything.");
+                addMessage("system", "Okay, I will wait for your decision instead of acting on my own.");
                 finishStudy();
               });
             }
