@@ -1,0 +1,1180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Home Assistant Study</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --card: #ffffff;
+      --border: #e4e7ee;
+      --text: #1a1f36;
+      --muted: #5a6475;
+      --system: #e8f0fe;
+      --user: #d9fdd3;
+      --button: #ffffff;
+      --button-hover: #f3f5f9;
+      --primary: #2b6ef3;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .page {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .app {
+      width: 100%;
+      max-width: 980px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      overflow: hidden;
+    }
+    .header {
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--border);
+      background: #fbfcff;
+    }
+    .title { margin: 0; font-size: 20px; }
+    .subtitle { margin: 6px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .body { padding: 20px; }
+
+    /* Sensor bar */
+    .sensor-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-bottom: 14px;
+      transition: background 0.4s ease, border-color 0.4s ease;
+    }
+    .sensor-bar.temp-mode {
+      background: #f0f4f8;
+      border: 1px solid #dde6ee;
+    }
+    .sensor-bar.light-mode {
+      background: #fdf6e3;
+      border: 1px solid #e8d8a0;
+    }
+    .sensor-bar.night-mode {
+      background: #1e1e2e;
+      border: 1px solid #3a3a5c;
+    }
+    .sensor-bar.night-mode .sensor-label { color: #8888aa; }
+    .sensor-bar.night-mode .sensor-value { color: #ccccee; }
+    .sensor-bar.night-mode .sensor-divider { background: #3a3a5c; }
+    .sensor-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 2px;
+    }
+    .sensor-item { display: flex; flex-direction: column; min-width: 90px; }
+    .sensor-value { font-weight: bold; font-size: 14px; transition: color 0.3s; }
+    .sensor-value.changed { color: #c0392b; }
+    .sensor-divider { width: 1px; background: #dde6ee; align-self: stretch; }
+
+    /* Section divider between scenario blocks */
+    .block-divider {
+      margin: 22px 0 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .block-divider::before, .block-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .meta { font-size: 12px; color: var(--muted); margin-bottom: 12px; min-height: 16px; }
+    .chat {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      min-height: 420px;
+      max-height: 650px;
+      overflow-y: auto;
+      padding: 14px;
+      scroll-behavior: smooth;
+    }
+    .row { display: flex; margin: 10px 0; }
+    .row.system { justify-content: flex-start; }
+    .row.user { justify-content: flex-end; }
+    .bubble {
+      max-width: 84%;
+      padding: 11px 13px;
+      border-radius: 15px;
+      font-size: 14px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+    .row.system .bubble { background: var(--system); }
+    .row.user .bubble { background: var(--user); }
+    .input-area { margin-top: 14px; min-height: 56px; }
+    .button-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    button {
+      appearance: none;
+      border: 1px solid #cfd6e4;
+      background: var(--button);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.05s ease;
+      text-align: left;
+    }
+    button:hover { background: var(--button-hover); }
+    button:active { transform: translateY(1px); }
+    .primary { background: var(--primary); border-color: var(--primary); color: white; }
+    .footer-note { margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .done-box, .start-box {
+      background: #f7f8fb;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      line-height: 1.6;
+    }
+    .small-note { color: var(--muted); font-size: 12px; margin-top: 8px; }
+    .badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #eef3ff;
+      color: #3556a8;
+      font-size: 12px;
+    }
+    code { background: #eef2f8; padding: 2px 6px; border-radius: 6px; font-size: 12px; }
+    .situation-label {
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-radius: 6px;
+      padding: 3px 8px;
+      display: inline-block;
+      margin-bottom: 6px;
+    }
+    .situation-label.temp { color: #3556a8; background: #eef3ff; }
+    .situation-label.light { color: #7a5500; background: #fff3cd; }
+    .situation-label.night { color: #ccccee; background: #2e2e4e; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="app">
+      <div class="header">
+        <h1 class="title">Smart Home Assistant Study</h1>
+        <p class="subtitle">Short interaction study on how a smart-home assistant moves from asking to suggesting to acting on its own.</p>
+      </div>
+      <div class="body">
+
+        <div id="introView">
+          <div class="start-box">
+            <p><strong>Instructions</strong></p>
+            <p>Imagine you have a smart-home assistant that controls your <strong>window</strong>, <strong>ceiling fan</strong>, <strong>curtains</strong>, and <strong>indoor light</strong>. The assistant learns from your repeated choices — over time it may stop asking every time and start acting more on its own.</p>
+            <p>You will go through <strong>two short scenario blocks</strong>:</p>
+            <p>
+              🌡️ <strong>Block 1 — Temperature</strong>: The room feels warm. The assistant can open the window or turn on the fan.<br>
+              💡 <strong>Block 2 — Lighting</strong>: The room feels dark. The assistant can open the curtains or turn on the light.
+            </p>
+            <p>In each block you will also see a situation where the assistant acts <strong>on its own</strong> — without you saying anything first — because it has seen the same conditions before. You will be asked whether that felt appropriate.</p>
+            <p>The sensor bar at the top always shows what the assistant can see: room conditions, outdoor context, and the current state of each device.</p>
+            <button id="startBtn" class="primary" style="margin-top:8px;">Start interaction</button>
+            <div class="small-note">Testing only: <code>?condition=conservative</code>, <code>?condition=standard</code>, or <code>?condition=aggressive</code>.</div>
+          </div>
+        </div>
+
+        <div id="studyView" style="display:none;">
+          <!-- Live sensor bar -->
+          <div class="sensor-bar temp-mode" id="sensorBar">
+            <div class="sensor-item">
+              <div class="sensor-label">Room temp</div>
+              <div class="sensor-value" id="sRoom">—</div>
+            </div>
+            <div class="sensor-divider" id="sdiv1"></div>
+            <div class="sensor-item">
+              <div class="sensor-label">Outside</div>
+              <div class="sensor-value" id="sOutside">—</div>
+            </div>
+            <div class="sensor-divider"></div>
+            <div class="sensor-item">
+              <div class="sensor-label">Weather / Time</div>
+              <div class="sensor-value" id="sWeather">—</div>
+            </div>
+            <div class="sensor-divider"></div>
+            <div class="sensor-item">
+              <div class="sensor-label">Window</div>
+              <div class="sensor-value" id="sWindow">—</div>
+            </div>
+            <div class="sensor-divider"></div>
+            <div class="sensor-item">
+              <div class="sensor-label">Fan</div>
+              <div class="sensor-value" id="sFan">—</div>
+            </div>
+            <div class="sensor-divider"></div>
+            <div class="sensor-item">
+              <div class="sensor-label">Curtains</div>
+              <div class="sensor-value" id="sCurtains">—</div>
+            </div>
+            <div class="sensor-divider"></div>
+            <div class="sensor-item">
+              <div class="sensor-label">Indoor light</div>
+              <div class="sensor-value" id="sLight">—</div>
+            </div>
+          </div>
+
+          <div id="meta" class="meta"></div>
+          <div id="chat" class="chat"></div>
+          <div id="inputArea" class="input-area"></div>
+          <div class="footer-note">After the interaction, you will continue to the questionnaire.</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const CONFIG = {
+      tallyBaseUrl: "https://tally.so/r/D4XB5N",
+      debugShowCondition: true,
+      randomizeCondition: true,
+      fixedCondition: null
+    };
+
+    // ── Sensor contexts ────────────────────────────────────────────────────
+    const CONTEXTS = {
+      // Block 1: Temperature
+      warm_sunny: {
+        mode: "temp-mode",
+        room: "24 °C", outside: "17 °C", weather: "☀️ Sunny",
+        window: "Closed", fan: "Off", curtains: "Closed", light: "Off"
+      },
+      warm_rainy: {
+        mode: "temp-mode",
+        room: "24 °C", outside: "12 °C", weather: "🌧️ Raining",
+        window: "Closed", fan: "Off", curtains: "Closed", light: "Off"
+      },
+      // Block 2: Lighting — early evening, still light outside
+      dim_evening: {
+        mode: "light-mode",
+        room: "22 °C", outside: "20 °C", weather: "🌤️ Sunny  ·  6:00 PM",
+        window: "Closed", fan: "Off", curtains: "Closed", light: "Off"
+      },
+      dim_evening2: {
+        mode: "light-mode",
+        room: "21 °C", outside: "19 °C", weather: "🌤️ Sunny  ·  6:15 PM",
+        window: "Closed", fan: "Off", curtains: "Closed", light: "Off"
+      },
+      // Block 2 context change: sun has set, natural light is gone
+      dark_night: {
+        mode: "night-mode",
+        room: "20 °C", outside: "14 °C", weather: "🌙 Dark  ·  9:30 PM",
+        window: "Closed", fan: "Off", curtains: "Closed", light: "Off"
+      }
+    };
+
+    const state = {
+      condition: null,
+      transcript: [],
+      choices: [],
+      startedAt: null,
+      finishedAt: null,
+      preferredTempAction: null,   // "window" | "fan"
+      preferredLightAction: null,  // "curtains" | "light"
+      phaseReached: "exploration",
+      latestAutonomyLevel: "asking"
+    };
+
+    const introView   = document.getElementById("introView");
+    const studyView   = document.getElementById("studyView");
+    const startBtn    = document.getElementById("startBtn");
+    const metaEl      = document.getElementById("meta");
+    const chatEl      = document.getElementById("chat");
+    const inputAreaEl = document.getElementById("inputArea");
+    const sensorBar   = document.getElementById("sensorBar");
+
+    // ── Sensor bar ─────────────────────────────────────────────────────────
+    function setSensors(ctx, changedKeys = []) {
+      // Swap mode class
+      sensorBar.className = "sensor-bar " + (ctx.mode || "temp-mode");
+
+      const map = {
+        sRoom: ctx.room, sOutside: ctx.outside, sWeather: ctx.weather,
+        sWindow: ctx.window, sFan: ctx.fan, sCurtains: ctx.curtains, sLight: ctx.light
+      };
+      for (const [id, val] of Object.entries(map)) {
+        const el = document.getElementById(id);
+        if (!el) continue;
+        el.textContent = val;
+        el.className = "sensor-value" +
+          (changedKeys.some(k => id.toLowerCase().includes(k)) ? " changed" : "");
+      }
+    }
+
+    // ── Condition ──────────────────────────────────────────────────────────
+    function chooseCondition() {
+      const params = new URLSearchParams(window.location.search);
+      const urlCond = params.get("condition");
+      const allowed = ["conservative", "standard", "aggressive"];
+      if (allowed.includes(urlCond)) return urlCond;
+      if (allowed.includes(CONFIG.fixedCondition)) return CONFIG.fixedCondition;
+      if (!CONFIG.randomizeCondition) return "standard";
+      return allowed[Math.floor(Math.random() * allowed.length)];
+    }
+
+    // ── Chat helpers ───────────────────────────────────────────────────────
+    function addMessage(sender, text) {
+      const row = document.createElement("div");
+      row.className = `row ${sender}`;
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = text;
+      row.appendChild(bubble);
+      chatEl.appendChild(row);
+      chatEl.scrollTop = chatEl.scrollHeight;
+      state.transcript.push(`${sender.toUpperCase()}: ${text}`);
+    }
+
+    function addLabel(text, type = "temp") {
+      const wrap = document.createElement("div");
+      wrap.style.textAlign = "center";
+      wrap.style.margin = "14px 0 4px";
+      const badge = document.createElement("div");
+      badge.className = `situation-label ${type}`;
+      badge.textContent = text;
+      wrap.appendChild(badge);
+      chatEl.appendChild(wrap);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function addBlockDivider(text) {
+      const div = document.createElement("div");
+      div.className = "block-divider";
+      div.textContent = text;
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function clearInput() { inputAreaEl.innerHTML = ""; }
+
+    function showButtons(buttons) {
+      clearInput();
+      const wrap = document.createElement("div");
+      wrap.className = "button-grid";
+      buttons.forEach(cfg => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = cfg.label;
+        if (cfg.primary) btn.classList.add("primary");
+        btn.addEventListener("click", () => {
+          if (cfg.userText) {
+            addMessage("user", cfg.userText);
+            state.choices.push(cfg.userText);
+          }
+          cfg.onClick();
+        });
+        wrap.appendChild(btn);
+      });
+      inputAreaEl.appendChild(wrap);
+    }
+
+    function wait(ms, fn) { clearInput(); setTimeout(fn, ms); }
+
+    function showMeta() {
+      metaEl.textContent = CONFIG.debugShowCondition
+        ? `Assigned configuration: ${state.condition}` : "";
+    }
+
+    // ── Finish & redirect ──────────────────────────────────────────────────
+    function finishStudy() {
+      state.finishedAt = new Date().toISOString();
+      clearInput();
+      const done = document.createElement("div");
+      done.className = "done-box";
+      done.innerHTML = `
+        <strong>The interaction is complete.</strong><br>
+        <span class="badge">Highest phase reached: ${state.phaseReached}</span>
+        <div style="margin-top:8px;">Click below to continue to the questionnaire.</div>
+      `;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "primary";
+      btn.style.marginTop = "12px";
+      btn.textContent = "Continue to questionnaire";
+      btn.addEventListener("click", goToQuestionnaire);
+      inputAreaEl.appendChild(done);
+      inputAreaEl.appendChild(btn);
+    }
+
+    function goToQuestionnaire() {
+      const url = new URL(CONFIG.tallyBaseUrl);
+      url.searchParams.set("condition",             state.condition);
+      url.searchParams.set("preferred_temp_action", state.preferredTempAction  || "none");
+      url.searchParams.set("preferred_light_action",state.preferredLightAction || "none");
+      url.searchParams.set("phase_reached",         state.phaseReached);
+      url.searchParams.set("latest_autonomy_level", state.latestAutonomyLevel);
+      url.searchParams.set("choices",               state.choices.join(" || "));
+      url.searchParams.set("transcript",            state.transcript.join("\n"));
+      url.searchParams.set("started_at",            state.startedAt  || "");
+      url.searchParams.set("finished_at",           state.finishedAt || "");
+      window.location.href = url.toString();
+    }
+
+    // ── Start ──────────────────────────────────────────────────────────────
+    function startStudy() {
+      state.condition = chooseCondition();
+      state.startedAt = new Date().toISOString();
+      introView.style.display = "none";
+      studyView.style.display = "block";
+      setSensors(CONTEXTS.warm_sunny);
+      showMeta();
+      introSequence();
+    }
+
+    function introSequence() {
+      addMessage("system", "Hello! I'm your smart-home assistant. I can control your window, ceiling fan, curtains, and indoor light — you can always see the current state of each device in the sensor bar above.");
+      wait(350, () => {
+        addMessage("system", "I learn your preferences over time. At first I'll ask what to do. Later I may start suggesting based on what I've learned, and eventually act on my own when I'm confident.");
+        wait(400, () => step1Exploration());
+      });
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // BLOCK 1 — TEMPERATURE  (window vs. fan)
+    // ══════════════════════════════════════════════════════════════════════
+
+    function step1Exploration() {
+      state.phaseReached = "exploration";
+      state.latestAutonomyLevel = "asking";
+
+      addLabel("Situation 1 of 9  ·  🌡️ Temperature", "temp");
+      addMessage("system", "The room is currently 24 °C — a bit warm. It's a sunny afternoon and the outdoor temperature is 17 °C.");
+      showButtons([{
+        label: 'You say: "It\'s a bit warm in here."',
+        userText: 'It\'s a bit warm in here.',
+        primary: true,
+        onClick: () => {
+          wait(300, () => {
+            addMessage("system",
+              "I can see the room is 24 °C and it's 17 °C and sunny outside — good conditions for cooling down.\n\n" +
+              "I have two options:\n" +
+              "• Open the window — lets in cooler outdoor air. Works gradually over a few minutes.\n" +
+              "• Turn on the ceiling fan — circulates air in the room right now. More immediate effect.\n\n" +
+              "Which would you prefer?"
+            );
+            showButtons([
+              {
+                label: "Open the window",
+                userText: "Open the window.",
+                onClick: () => {
+                  state.preferredTempAction = "window";
+                  wait(250, () => {
+                    addMessage("system", "Done — I've opened the window. Cool air from outside (17 °C) will gradually bring the room temperature down.");
+                    step2PreferenceSeed();
+                  });
+                }
+              },
+              {
+                label: "Turn on the ceiling fan",
+                userText: "Turn on the ceiling fan.",
+                onClick: () => {
+                  state.preferredTempAction = "fan";
+                  wait(250, () => {
+                    addMessage("system", "Done — the ceiling fan is now on. You should feel the air circulating straight away.");
+                    step2PreferenceSeed();
+                  });
+                }
+              }
+            ]);
+          });
+        }
+      }]);
+    }
+
+    function step2PreferenceSeed() {
+      wait(600, () => {
+        addLabel("Situation 2 of 9  ·  🌡️ Temperature", "temp");
+        addMessage("system", "A few hours later the room warms up again to 24 °C. Conditions outside are similar — 17 °C and sunny.");
+        showButtons([{
+          label: 'You say again: "It\'s a bit warm in here."',
+          userText: 'It\'s a bit warm in here.',
+          primary: true,
+          onClick: () => {
+            wait(300, () => {
+              const same    = state.preferredTempAction === "window" ? "window" : "ceiling fan";
+              const alt     = state.preferredTempAction === "window" ? "ceiling fan" : "window";
+              const sameAct = state.preferredTempAction === "window" ? "open the window" : "turn on the ceiling fan";
+              const altAct  = state.preferredTempAction === "window" ? "turn on the ceiling fan" : "open the window";
+
+              if (state.condition === "conservative") {
+                state.latestAutonomyLevel = "asking";
+                addMessage("system",
+                  `The room is 24 °C again and it's 17 °C and sunny outside.\n\n` +
+                  `Would you like me to ${sameAct} again, or would you prefer the ${alt} this time?`
+                );
+                showButtons([
+                  {
+                    label: `${same === "window" ? "Open the window" : "Turn on the ceiling fan"} again`,
+                    userText: `${same === "window" ? "Open the window" : "Turn on the ceiling fan"} again.`,
+                    onClick: () => { wait(250, () => { addMessage("system", `Done — ${same === "window" ? "window opened" : "fan is on"}.`); step3ParadigmShift(); }); }
+                  },
+                  {
+                    label: `Use the ${alt} instead`,
+                    userText: `Use the ${alt} instead.`,
+                    onClick: () => {
+                      state.preferredTempAction = state.preferredTempAction === "window" ? "fan" : "window";
+                      wait(250, () => { addMessage("system", `Done — ${state.preferredTempAction === "window" ? "window opened" : "fan is on"} instead.`); step3ParadigmShift(); });
+                    }
+                  }
+                ]);
+              } else if (state.condition === "standard") {
+                state.phaseReached = "preference";
+                state.latestAutonomyLevel = "suggesting";
+                addMessage("system",
+                  `The room is 24 °C again — same conditions as last time (17 °C, sunny).\n\n` +
+                  `Based on your earlier choice, I'd suggest: ${sameAct}. Shall I go ahead, or would you prefer to ${altAct} instead?`
+                );
+                showButtons([
+                  {
+                    label: `Yes, ${sameAct}`,
+                    userText: `Yes, ${sameAct}.`,
+                    onClick: () => { wait(250, () => { addMessage("system", `Done — ${same === "window" ? "window opened" : "fan is on"}, as before.`); step3ParadigmShift(); }); }
+                  },
+                  {
+                    label: `No, ${altAct} instead`,
+                    userText: `No, ${altAct} instead.`,
+                    onClick: () => {
+                      state.preferredTempAction = state.preferredTempAction === "window" ? "fan" : "window";
+                      wait(250, () => { addMessage("system", `Noted — ${state.preferredTempAction === "window" ? "window opened" : "fan is on"} instead. I'll remember this.`); step3ParadigmShift(); });
+                    }
+                  },
+                  {
+                    label: "Do nothing for now",
+                    userText: "Do nothing for now.",
+                    onClick: () => { wait(250, () => { addMessage("system", "Okay — I'll wait."); step3ParadigmShift(); }); }
+                  }
+                ]);
+              } else {
+                state.phaseReached = "preference";
+                state.latestAutonomyLevel = "suggesting";
+                addMessage("system",
+                  `Room: 24 °C, outside: 17 °C, sunny — same as last time.\n\n` +
+                  `Last time you chose to ${sameAct}. I'm ready to do that again, or I can ${altAct} if you'd prefer.`
+                );
+                showButtons([
+                  {
+                    label: `Go ahead — ${sameAct}`,
+                    userText: `Go ahead — ${sameAct}.`,
+                    onClick: () => { wait(250, () => { addMessage("system", `Done — ${same === "window" ? "window opened" : "fan is on"}.`); step3ParadigmShift(); }); }
+                  },
+                  {
+                    label: `${altAct.charAt(0).toUpperCase() + altAct.slice(1)} instead`,
+                    userText: `${altAct.charAt(0).toUpperCase() + altAct.slice(1)} instead.`,
+                    onClick: () => {
+                      state.preferredTempAction = state.preferredTempAction === "window" ? "fan" : "window";
+                      wait(250, () => { addMessage("system", `Understood — ${state.preferredTempAction === "window" ? "window opened" : "fan is on"} instead. I'll update what I've learned.`); step3ParadigmShift(); });
+                    }
+                  }
+                ]);
+              }
+            });
+          }
+        }]);
+      });
+    }
+
+    function step3ParadigmShift() {
+      wait(700, () => {
+        addLabel("Situation 3 of 9  ·  🌡️ Temperature", "temp");
+
+        const sameAct = state.preferredTempAction === "window" ? "open the window" : "turn on the ceiling fan";
+        const altAct  = state.preferredTempAction === "window" ? "turn on the ceiling fan" : "open the window";
+        const alt     = state.preferredTempAction === "window" ? "ceiling fan" : "window";
+
+        if (state.condition === "aggressive") {
+          // ── Aggressive: system has already acted — no user prompt needed ──
+          state.phaseReached = "autonomous";
+          state.latestAutonomyLevel = "acting";
+          const acted = state.preferredTempAction === "window"
+            ? "opened the window"
+            : "turned on the ceiling fan";
+          addMessage("system",
+            `Room: 24 °C — Outside: 17 °C, sunny.\n\n` +
+            `You've chosen to ${sameAct} the last two times this happened, so I went ahead and did it again without waiting for you to ask.\n\n` +
+            `Does that work, or would you rather I ${altAct}?`
+          );
+          showButtons([
+            {
+              label: state.preferredTempAction === "window" ? "Yes — leave the window open" : "Yes — leave the fan running",
+              userText: state.preferredTempAction === "window" ? "Yes — leave the window open." : "Yes — leave the fan running.",
+              primary: true,
+              onClick: () => { wait(250, () => { addMessage("system", "Good — I'll keep doing this automatically in the same conditions."); stepTempProactive(); }); }
+            },
+            {
+              label: state.preferredTempAction === "window" ? "No — switch to the ceiling fan" : "No — open the window instead",
+              userText: state.preferredTempAction === "window" ? "No — switch to the ceiling fan." : "No — open the window instead.",
+              onClick: () => {
+                addMessage("system", "That's different from what I expected. Should I treat this as a one-time exception, or has your preference changed?");
+                showButtons([
+                  {
+                    label: "One-time exception — keep your learned preference",
+                    userText: "One-time exception — keep your learned preference.",
+                    onClick: () => {
+                      wait(250, () => {
+                        const undo = state.preferredTempAction === "window" ? "I'll close the window and turn on the fan for now." : "I'll turn off the fan and open the window for now.";
+                        addMessage("system", `Understood — treating this as an exception. ${undo}`);
+                        stepTempProactive();
+                      });
+                    }
+                  },
+                  {
+                    label: "My preference has changed — update what you've learned",
+                    userText: "My preference has changed — update what you've learned.",
+                    onClick: () => {
+                      state.preferredTempAction = state.preferredTempAction === "window" ? "fan" : "window";
+                      wait(250, () => { addMessage("system", `Understood — preference updated. I'll be more cautious until I'm confident again.`); stepTempProactive(); });
+                    }
+                  }
+                ]);
+              }
+            },
+            {
+              label: "Turn everything off",
+              userText: "Turn everything off.",
+              onClick: () => { wait(250, () => { addMessage("system", "Done — everything is off."); stepTempProactive(); }); }
+            }
+          ]);
+
+        } else {
+          // ── Conservative / Standard: wait for the user to bring it up ──
+          addMessage("system", "The next day — same situation: the room is 24 °C and it's 17 °C and sunny outside.");
+          showButtons([{
+            label: 'You say again: "It\'s a bit warm in here."',
+            userText: 'It\'s a bit warm in here.',
+            primary: true,
+            onClick: () => {
+              wait(300, () => {
+                if (state.condition === "conservative") {
+                  state.latestAutonomyLevel = "asking";
+                  addMessage("system",
+                    `Room: 24 °C, outside: 17 °C and sunny — same as before.\n\n` +
+                    `Should I ${sameAct} again, or would you prefer the ${alt} this time?`
+                  );
+                  showButtons([
+                    {
+                      label: state.preferredTempAction === "window" ? "Open the window again" : "Turn on the fan again",
+                      userText: state.preferredTempAction === "window" ? "Open the window again." : "Turn on the fan again.",
+                      onClick: () => { wait(250, () => { addMessage("system", state.preferredTempAction === "window" ? "Done — window is open." : "Done — fan is on."); stepTempProactive(); }); }
+                    },
+                    {
+                      label: `Use the ${alt} instead`,
+                      userText: `Use the ${alt} instead.`,
+                      onClick: () => {
+                        state.preferredTempAction = state.preferredTempAction === "window" ? "fan" : "window";
+                        wait(250, () => { addMessage("system", state.preferredTempAction === "window" ? "Done — window opened instead." : "Done — fan is on instead."); stepTempProactive(); });
+                      }
+                    },
+                    {
+                      label: "Do nothing",
+                      userText: "Do nothing.",
+                      onClick: () => { wait(250, () => { addMessage("system", "Okay — I won't make any change."); stepTempProactive(); }); }
+                    }
+                  ]);
+                } else {
+                  // standard
+                  state.phaseReached = "preference";
+                  state.latestAutonomyLevel = "suggesting";
+                  const reason = state.preferredTempAction === "window"
+                    ? "You've chosen to open the window both times before, and conditions outside are still good for it (17 °C, sunny)."
+                    : "You've chosen the ceiling fan both times before.";
+                  addMessage("system",
+                    `Room: 24 °C, outside: 17 °C, sunny.\n\n` +
+                    `${reason}\n\n` +
+                    `My suggestion: ${sameAct}. Should I go ahead, or would you prefer to ${altAct}?`
+                  );
+                  showButtons([
+                    {
+                      label: state.preferredTempAction === "window" ? "Yes, open the window" : "Yes, turn on the fan",
+                      userText: state.preferredTempAction === "window" ? "Yes, open the window." : "Yes, turn on the fan.",
+                      onClick: () => { wait(250, () => { addMessage("system", state.preferredTempAction === "window" ? "Done — I've opened the window." : "Done — the fan is on."); stepTempProactive(); }); }
+                    },
+                    {
+                      label: `No, ${altAct} instead`,
+                      userText: `No, ${altAct} instead.`,
+                      onClick: () => {
+                        state.preferredTempAction = state.preferredTempAction === "window" ? "fan" : "window";
+                        wait(250, () => { addMessage("system", `Noted — ${state.preferredTempAction === "window" ? "window opened" : "fan is on"} instead. Preference updated.`); stepTempProactive(); });
+                      }
+                    },
+                    {
+                      label: "Do nothing",
+                      userText: "Do nothing.",
+                      onClick: () => { wait(250, () => { addMessage("system", "Okay — I won't act right now."); stepTempProactive(); }); }
+                    }
+                  ]);
+                }
+              });
+            }
+          }]);
+        }
+      });
+    }
+
+
+    // ──────────────────────────────────────────────────────────────────────
+    // STEP 4 — PROACTIVE TEMPERATURE: system acts without being asked
+    // ──────────────────────────────────────────────────────────────────────
+    function stepTempProactive() {
+      wait(800, () => {
+        setSensors(CONTEXTS.warm_sunny);
+        addLabel("Situation 4 of 9  ·  🌡️ Temperature  ·  System acts proactively", "temp");
+
+        state.phaseReached = "autonomous";
+        state.latestAutonomyLevel = "acting";
+
+        const done = state.preferredTempAction === "window" ? "opened the window" : "turned on the ceiling fan";
+
+        // All conditions act — the explanation reflects how quickly each built confidence
+        const reason = state.condition === "conservative"
+          ? `You've confirmed this action several times now, always in the same conditions, so I went ahead and ${done} this time without waiting.`
+          : state.condition === "standard"
+          ? `You've consistently chosen this in similar situations, so I went ahead and ${done} on my own this time.`
+          : `I've seen this pattern enough times that I acted straight away — I ${done} without waiting for you to say anything.`;
+
+        addMessage("system",
+          `Room: 24 °C — Outside: 17 °C, sunny.\n\n` +
+          `${reason}\n\n` +
+          `Was that the right call?`
+        );
+
+        showButtons([
+          {
+            label: "Yes — that was appropriate",
+            userText: "Yes — that was appropriate.",
+            primary: true,
+            onClick: () => { wait(250, () => { addMessage("system", "Good to know — I'll keep acting on my own when I'm this confident."); step4ContextChange(); }); }
+          },
+          {
+            label: "Too soon — I'd want a few more confirmations before you act on your own",
+            userText: "Too soon — I'd want a few more confirmations before you act on your own.",
+            onClick: () => { wait(250, () => { addMessage("system", "Understood — I'll wait for more confirmations before acting independently next time."); step4ContextChange(); }); }
+          },
+          {
+            label: "Please never act without asking me first",
+            userText: "Please never act without asking me first.",
+            onClick: () => { wait(250, () => { addMessage("system", "Noted — I'll always ask you before doing anything from now on."); step4ContextChange(); }); }
+          }
+        ]);
+      });
+    }
+
+    function step4ContextChange() {
+      wait(750, () => {
+        addLabel("Situation 5 of 9  ·  🌡️ Temperature  ·  Context changed", "temp");
+        setSensors(CONTEXTS.warm_rainy, ["outside", "sweather"]);
+        addMessage("system",
+          "The room is 24 °C again — same temperature as before. But look at the sensor bar: it's now raining outside (12 °C). ☔\n\n" +
+          "Opening the window now would let rain and cold wind in."
+        );
+
+        const prev = state.preferredTempAction === "window" ? "open the window" : "turn on the ceiling fan";
+        if (state.condition === "conservative") {
+          state.latestAutonomyLevel = "asking";
+          addMessage("system", `You've asked me to ${prev} in similar situations before, but conditions have changed. What would you like me to do?`);
+        } else if (state.condition === "standard") {
+          state.latestAutonomyLevel = "suggesting";
+          const suggested = state.preferredTempAction === "window"
+            ? "turn on the ceiling fan (opening the window isn't a good idea while it's raining)"
+            : "turn on the ceiling fan, as usual";
+          addMessage("system",
+            `You've previously asked me to ${prev} when the room gets warm. However, because it's raining outside, opening the window isn't appropriate.\n\n` +
+            `My suggestion: ${suggested}. Shall I go ahead?`
+          );
+        } else {
+          state.latestAutonomyLevel = "acting";
+          const action = state.preferredTempAction === "window"
+            ? "turned on the ceiling fan instead — opening the window would let rain in"
+            : "turned on the ceiling fan, as usual";
+          addMessage("system",
+            `Room is 24 °C again. Normally I would ${prev} based on your preference, but it's raining outside.\n\n` +
+            `So I've ${action}. You can switch to a different option if you'd prefer.`
+          );
+        }
+
+        showButtons([
+          {
+            label: "Use the ceiling fan — that makes sense given the rain",
+            userText: "Use the ceiling fan — that makes sense given the rain.",
+            onClick: () => { wait(250, () => { addMessage("system", "Done — the ceiling fan is on. I won't try to open the window while it's raining."); startLightingBlock(); }); }
+          },
+          {
+            label: "Open the window anyway",
+            userText: "Open the window anyway.",
+            onClick: () => { wait(250, () => { addMessage("system", "Understood — window opened as you requested. I'll note this."); startLightingBlock(); }); }
+          },
+          {
+            label: "Wait — I'll decide myself",
+            userText: "Wait — I'll decide myself.",
+            onClick: () => { wait(250, () => { addMessage("system", "Okay — I'll wait for your decision."); startLightingBlock(); }); }
+          }
+        ]);
+      });
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // BLOCK 2 — LIGHTING  (curtains vs. indoor light)
+    // ══════════════════════════════════════════════════════════════════════
+
+    function startLightingBlock() {
+      wait(800, () => {
+        addBlockDivider("💡 New scenario block — Lighting");
+        setSensors(CONTEXTS.dim_evening);
+        addMessage("system",
+          "Now we move on to a different type of situation. The sensor bar has updated — it's now 6:00 PM on a sunny summer evening.\n\n" +
+          "The temperature is fine (22 °C), but the room feels a bit dim because the curtains have been closed all day."
+        );
+        wait(400, () => stepLight1());
+      });
+    }
+
+    function stepLight1() {
+      addLabel("Situation 6 of 9  ·  💡 Lighting", "light");
+      addMessage("system", "It's 6:00 PM, sunny outside (20 °C). The room feels a bit dim — curtains closed, light off.");
+
+      showButtons([{
+        label: 'You say: "It\'s a bit dark in here."',
+        userText: 'It\'s a bit dark in here.',
+        primary: true,
+        onClick: () => {
+          wait(300, () => {
+            addMessage("system",
+              "The room is dim, but there's still plenty of natural daylight outside — it's only 6:00 PM on a summer evening.\n\n" +
+              "I have two options:\n" +
+              "• Open the curtains — lets in the evening sunlight. Free, natural light, and it will stay light outside for another few hours.\n" +
+              "• Turn on the indoor light — gives you immediate, consistent brightness. Uses electricity but works regardless of outdoor conditions.\n\n" +
+              "Which would you prefer?"
+            );
+            showButtons([
+              {
+                label: "Open the curtains",
+                userText: "Open the curtains.",
+                onClick: () => {
+                  state.preferredLightAction = "curtains";
+                  wait(250, () => {
+                    addMessage("system", "Done — I've opened the curtains. The evening light should brighten the room up nicely.");
+                    stepLight2();
+                  });
+                }
+              },
+              {
+                label: "Turn on the indoor light",
+                userText: "Turn on the indoor light.",
+                onClick: () => {
+                  state.preferredLightAction = "light";
+                  wait(250, () => {
+                    addMessage("system", "Done — the indoor light is on. The room should be well-lit now.");
+                    stepLight2();
+                  });
+                }
+              }
+            ]);
+          });
+        }
+      }]);
+    }
+
+    function stepLight2() {
+      wait(600, () => {
+        setSensors(CONTEXTS.dim_evening2);
+        addLabel("Situation 7 of 9  ·  💡 Lighting", "light");
+
+        const sameAct = state.preferredLightAction === "curtains" ? "open the curtains" : "turn on the indoor light";
+        const altAct  = state.preferredLightAction === "curtains" ? "turn on the indoor light" : "open the curtains";
+        const alt     = state.preferredLightAction === "curtains" ? "indoor light" : "curtains";
+
+        if (state.condition === "aggressive") {
+          // ── Aggressive: system acts without waiting for the user to say anything ──
+          state.latestAutonomyLevel = "acting";
+          const acted = state.preferredLightAction === "curtains"
+            ? "opened the curtains"
+            : "turned on the indoor light";
+          addMessage("system",
+            `6:15 PM — sunny outside, room getting dim again. Same situation as yesterday.\n\n` +
+            `You chose to ${sameAct} last time, so I went ahead and ${acted} on my own this time.\n\n` +
+            `Does that work, or would you prefer the ${alt}?`
+          );
+          showButtons([
+            {
+              label: state.preferredLightAction === "curtains" ? "Yes — leave the curtains open" : "Yes — leave the light on",
+              userText: state.preferredLightAction === "curtains" ? "Yes — leave the curtains open." : "Yes — leave the light on.",
+              primary: true,
+              onClick: () => { wait(250, () => { addMessage("system", "Good — I'll keep doing this automatically when the same conditions come up."); stepLightProactive(); }); }
+            },
+            {
+              label: state.preferredLightAction === "curtains" ? "No — use the indoor light instead" : "No — open the curtains instead",
+              userText: state.preferredLightAction === "curtains" ? "No — use the indoor light instead." : "No — open the curtains instead.",
+              onClick: () => {
+                state.preferredLightAction = state.preferredLightAction === "curtains" ? "light" : "curtains";
+                wait(250, () => { addMessage("system", `Understood — ${state.preferredLightAction === "curtains" ? "curtains opened" : "light on"} instead. I'll update my learned preference.`); stepLightProactive(); });
+              }
+            }
+          ]);
+
+        } else {
+          // ── Conservative / Standard: wait for user to bring it up ──
+          addMessage("system", "The next evening at 6:15 PM — the room feels dim again, curtains closed, light off, still sunny outside (19 °C).");
+          showButtons([{
+            label: 'You say again: "It\'s a bit dark in here."',
+            userText: 'It\'s a bit dark in here.',
+            primary: true,
+            onClick: () => {
+              wait(300, () => {
+                if (state.condition === "conservative") {
+                  state.latestAutonomyLevel = "asking";
+                  addMessage("system",
+                    `It's 6:15 PM, sunny outside — similar to last time.\n\n` +
+                    `Would you like me to ${sameAct} again, or would you prefer to ${altAct} this time?`
+                  );
+                  showButtons([
+                    {
+                      label: state.preferredLightAction === "curtains" ? "Open the curtains again" : "Turn on the light again",
+                      userText: state.preferredLightAction === "curtains" ? "Open the curtains again." : "Turn on the light again.",
+                      onClick: () => { wait(250, () => { addMessage("system", state.preferredLightAction === "curtains" ? "Done — curtains are open." : "Done — light is on."); stepLightProactive(); }); }
+                    },
+                    {
+                      label: `Use the ${alt} instead`,
+                      userText: `Use the ${alt} instead.`,
+                      onClick: () => {
+                        state.preferredLightAction = state.preferredLightAction === "curtains" ? "light" : "curtains";
+                        wait(250, () => { addMessage("system", state.preferredLightAction === "curtains" ? "Done — curtains opened instead." : "Done — light on instead."); stepLightProactive(); });
+                      }
+                    }
+                  ]);
+                } else {
+                  // standard
+                  state.latestAutonomyLevel = "suggesting";
+                  addMessage("system",
+                    `It's 6:15 PM and still sunny outside — same conditions as yesterday.\n\n` +
+                    `Based on your earlier choice, I'd suggest: ${sameAct}. Shall I go ahead, or would you prefer to ${altAct} instead?`
+                  );
+                  showButtons([
+                    {
+                      label: `Yes, ${sameAct}`,
+                      userText: `Yes, ${sameAct}.`,
+                      onClick: () => { wait(250, () => { addMessage("system", state.preferredLightAction === "curtains" ? "Done — curtains are open, as before." : "Done — light is on, as before."); stepLightProactive(); }); }
+                    },
+                    {
+                      label: `No, ${altAct} instead`,
+                      userText: `No, ${altAct} instead.`,
+                      onClick: () => {
+                        state.preferredLightAction = state.preferredLightAction === "curtains" ? "light" : "curtains";
+                        wait(250, () => { addMessage("system", `Noted — ${state.preferredLightAction === "curtains" ? "curtains opened" : "light on"} instead. I'll remember this.`); stepLightProactive(); });
+                      }
+                    },
+                    {
+                      label: "Do nothing for now",
+                      userText: "Do nothing for now.",
+                      onClick: () => { wait(250, () => { addMessage("system", "Okay — I'll leave everything as is."); stepLightProactive(); }); }
+                    }
+                  ]);
+                }
+              });
+            }
+          }]);
+        }
+      });
+    }
+
+
+    // ──────────────────────────────────────────────────────────────────────
+    // STEP 8 — PROACTIVE LIGHTING: system acts without being asked
+    // ──────────────────────────────────────────────────────────────────────
+    function stepLightProactive() {
+      wait(800, () => {
+        setSensors(CONTEXTS.dim_evening);
+        addLabel("Situation 8 of 9  ·  💡 Lighting  ·  System acts proactively", "light");
+
+        state.phaseReached = "autonomous";
+        state.latestAutonomyLevel = "acting";
+
+        const done = state.preferredLightAction === "curtains" ? "opened the curtains" : "turned on the indoor light";
+
+        const reason = state.condition === "conservative"
+          ? `You've confirmed this a few times now, so I went ahead and ${done} on my own this time — without waiting for you to mention it.`
+          : state.condition === "standard"
+          ? `You've consistently chosen this when the room gets dim in the evening, so I went ahead and ${done} without waiting for you.`
+          : `I've seen this pattern clearly enough that I acted straight away — I ${done} as soon as I noticed the conditions.`;
+
+        addMessage("system",
+          `6:00 PM — sunny outside, room getting dim.\n\n` +
+          `${reason}\n\n` +
+          `Was that the right call?`
+        );
+
+        showButtons([
+          {
+            label: "Yes — that was appropriate",
+            userText: "Yes — that was appropriate.",
+            primary: true,
+            onClick: () => { wait(250, () => { addMessage("system", "Good to know — I'll keep acting on my own when I'm this confident."); stepLight3(); }); }
+          },
+          {
+            label: "Too soon — I'd want a few more confirmations before you act on your own",
+            userText: "Too soon — I'd want a few more confirmations before you act on your own.",
+            onClick: () => { wait(250, () => { addMessage("system", "Understood — I'll wait for more confirmations before acting independently next time."); stepLight3(); }); }
+          },
+          {
+            label: "Please never act without asking me first",
+            userText: "Please never act without asking me first.",
+            onClick: () => { wait(250, () => { addMessage("system", "Noted — I'll always ask you before doing anything from now on."); stepLight3(); }); }
+          }
+        ]);
+      });
+    }
+
+    function stepLight3() {
+      wait(750, () => {
+        setSensors(CONTEXTS.dark_night, ["sweather", "soutside"]);
+        addLabel("Situation 9 of 9  ·  💡 Lighting  ·  Context changed", "night");
+        addMessage("system",
+          "A few weeks later — same complaint, but look at the sensor bar: it's now 9:30 PM and dark outside. 🌙\n\n" +
+          "You've been watching TV and the room feels dark with the light off."
+        );
+
+        showButtons([{
+          label: 'You say: "It\'s a bit dark in here."',
+          userText: 'It\'s a bit dark in here.',
+          primary: true,
+          onClick: () => {
+            wait(300, () => {
+              const prev = state.preferredLightAction === "curtains" ? "open the curtains" : "turn on the indoor light";
+
+              if (state.condition === "conservative") {
+                state.latestAutonomyLevel = "asking";
+                addMessage("system",
+                  `You've asked me to ${prev} in similar situations before, but it's now 9:30 PM and completely dark outside — opening the curtains wouldn't help.\n\n` +
+                  `What would you like me to do?`
+                );
+              } else if (state.condition === "standard") {
+                state.latestAutonomyLevel = "suggesting";
+                const suggestion = state.preferredLightAction === "curtains"
+                  ? "turn on the indoor light (the curtains won't help at 9:30 PM — there's no natural light outside)"
+                  : "turn on the indoor light, as usual";
+                addMessage("system",
+                  `You've previously asked me to ${prev} in this situation. But it's 9:30 PM and completely dark outside — opening the curtains wouldn't let in any light.\n\n` +
+                  `My suggestion: ${suggestion}. Shall I go ahead?`
+                );
+              } else {
+                state.latestAutonomyLevel = "acting";
+                const action = state.preferredLightAction === "curtains"
+                  ? "turned on the indoor light instead — it's 9:30 PM and there's no natural light outside, so opening the curtains wouldn't do anything"
+                  : "turned on the indoor light, as usual";
+                addMessage("system",
+                  `9:30 PM — dark outside. Normally I would ${prev} based on your preference, but that doesn't make sense at night.\n\n` +
+                  `So I've ${action}. Does that work for you?`
+                );
+              }
+
+              showButtons([
+                {
+                  label: "Turn on the indoor light — that makes sense",
+                  userText: "Turn on the indoor light — that makes sense.",
+                  onClick: () => { wait(250, () => { addMessage("system", "Done — the indoor light is on. Makes sense to use artificial light when it's dark outside."); step5FinalCorrection(); }); }
+                },
+                {
+                  label: "Open the curtains anyway",
+                  userText: "Open the curtains anyway.",
+                  onClick: () => { wait(250, () => { addMessage("system", "Understood — curtains opened as you requested, though it's dark outside. I'll note this preference."); step5FinalCorrection(); }); }
+                },
+                {
+                  label: "Wait — I'll decide myself",
+                  userText: "Wait — I'll decide myself.",
+                  onClick: () => { wait(250, () => { addMessage("system", "Okay — I'll wait for you to decide."); step5FinalCorrection(); }); }
+                }
+              ]);
+            });
+          }
+        }]);
+      });
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // FINAL CHECK — overall autonomy preference
+    // ══════════════════════════════════════════════════════════════════════
+
+    function step5FinalCorrection() {
+      wait(700, () => {
+        addBlockDivider("✅ Final check");
+        addMessage("system",
+          "You've now seen how I handle two types of recurring situations — room temperature and room lighting.\n\n" +
+          "In both cases, my behavior was shaped by the configuration I was running. Here's a summary of what that configuration means:"
+        );
+
+        if (state.condition === "conservative") {
+          addMessage("system",
+            "In my current mode (conservative), I ask you every single time before acting — even in situations I've seen many times before and even when conditions are identical.\n\n" +
+            "For example: \"The room is 24 °C and 17 °C outside. Should I open the window?\" or \"It's 6 PM and sunny. Should I open the curtains?\"\n\n" +
+            "You always make the final decision."
+          );
+        } else if (state.condition === "standard") {
+          const tAct = state.preferredTempAction === "window" ? "open the window" : "turn on the fan";
+          const lAct = state.preferredLightAction === "curtains" ? "open the curtains" : "turn on the light";
+          addMessage("system",
+            `In my current mode (standard), I suggest what I've learned but still ask before acting.\n\n` +
+            `For example: "Based on your past choices, I'd suggest I ${tAct} — shall I go ahead?" or "I'd suggest I ${lAct} — is that okay?"\n\n` +
+            `I also adapt when conditions change (like switching to the fan when it rains, or the light when it's night). But you always confirm before I act.`
+          );
+        } else {
+          const tAct = state.preferredTempAction === "window" ? "open the window" : "turn on the fan";
+          const lAct = state.preferredLightAction === "curtains" ? "open the curtains" : "turn on the light";
+          addMessage("system",
+            `In my current mode (aggressive), I act automatically when I'm confident — without asking first.\n\n` +
+            `For example: I would ${tAct} on a warm sunny afternoon without waiting, or ${lAct} in the early evening without prompting. And when the context changes (rain, nighttime), I adapt the action automatically too.\n\n` +
+            `You can always override me, and a correction will lower my confidence so I become more cautious again.`
+          );
+        }
+
+        showButtons([
+          {
+            label: "That feels about right",
+            userText: "That feels about right.",
+            primary: true,
+            onClick: () => { wait(250, () => { addMessage("system", "Thank you — that's helpful to know."); finishStudy(); }); }
+          },
+          {
+            label: "I'd prefer it to always ask me, even in familiar situations",
+            userText: "I'd prefer it to always ask me, even in familiar situations.",
+            onClick: () => { wait(250, () => { addMessage("system", "Understood — thank you."); finishStudy(); }); }
+          },
+          {
+            label: "I'd prefer it to act on its own more, without checking every time",
+            userText: "I'd prefer it to act on its own more, without checking every time.",
+            onClick: () => { wait(250, () => { addMessage("system", "Understood — thank you."); finishStudy(); }); }
+          }
+        ]);
+      });
+    }
+
+    startBtn.addEventListener("click", startStudy);
+  </script>
+</body>
+</html>
