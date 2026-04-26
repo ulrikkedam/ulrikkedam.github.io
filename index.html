@@ -184,8 +184,8 @@
             <p>Imagine you have a smart-home assistant that controls your <strong>window</strong>, <strong>ceiling fan</strong>, <strong>curtains</strong>, and <strong>indoor light</strong>. The assistant learns from your repeated choices — over time it may stop asking every time and start acting more on its own.</p>
             <p>You will go through <strong>two short scenario blocks</strong>:</p>
             <p>
-              🌡️ <strong>Block 1 — Temperature</strong>: The room feels warm. The assistant can open the window or turn on the fan.<br>
-              💡 <strong>Block 2 — Lighting</strong>: The room feels dark. The assistant can open the curtains or turn on the light.
+               <strong>Block 1 — Temperature</strong>: The room feels warm. The assistant can open the window or turn on the fan.<br>
+               <strong>Block 2 — Lighting</strong>: The room feels dark. The assistant can open the curtains or turn on the light.
             </p>
             <p>In each block you will also see a situation where the assistant acts <strong>on its own</strong> — without you saying anything first — because it has seen the same conditions before. You will be asked whether that felt appropriate.</p>
             <p>The sensor bar at the top always shows what the assistant can see: room conditions, outdoor context, and the current state of each device.</p>
@@ -417,7 +417,7 @@
     function step1Exploration() {
       state.phaseReached = "exploration";
       state.latestAutonomyLevel = "asking";
-      addLabel("Situation 1 of 9  ·  🌡️ Temperature", "temp");
+      addLabel("Situation 1 of 9  ·   Temperature", "temp");
       addMessage("system", "The room is currently 24 °C — a bit warm. It's a sunny afternoon and the outdoor temperature is 17 °C.");
       showButtons([{
         label: 'You say: "It\'s a bit warm in here."',
@@ -458,7 +458,7 @@
     // SITUATION 2 — same conditions, system has seen this once
     function step2PreferenceSeed() {
       wait(600, () => {
-        addLabel("Situation 2 of 9  ·  🌡️ Temperature", "temp");
+        addLabel("Situation 2 of 9  ·   Temperature", "temp");
         addMessage("system", "A few hours later the room warms up again to 24 °C. Conditions outside are similar — 17 °C and sunny.");
         showButtons([{
           label: 'You say again: "It\'s a bit warm in here."',
@@ -537,7 +537,7 @@
     // SITUATION 3 — third occurrence; aggressive acts without user prompt
     function step3ParadigmShift() {
       wait(700, () => {
-        addLabel("Situation 3 of 9  ·  🌡️ Temperature", "temp");
+        addLabel("Situation 3 of 9  ·   Temperature", "temp");
 
         const sameAct = state.preferredTempAction === "window" ? "open the window" : "turn on the ceiling fan";
         const altAct  = state.preferredTempAction === "window" ? "turn on the ceiling fan" : "open the window";
@@ -607,7 +607,7 @@
     function stepTempProactive() {
       wait(800, () => {
         setSensors(CONTEXTS.warm_sunny);
-        addLabel("Situation 4 of 9  ·  🌡️ Temperature  ·  System acts proactively", "temp");
+        addLabel("Situation 4 of 9  ·   Temperature  ·  System acts proactively", "temp");
 
         const action  = state.preferredTempAction === "window" ? "open the window" : "turn on the ceiling fan";
         const done    = state.preferredTempAction === "window" ? "opened the window" : "turned on the ceiling fan";
@@ -683,7 +683,7 @@
     // SITUATION 5 — context change: rain outside
     function step4ContextChange() {
       wait(750, () => {
-        addLabel("Situation 5 of 9  ·  🌡️ Temperature  ·  Context changed", "temp");
+        addLabel("Situation 5 of 9  ·   Temperature  ·  Context changed", "temp");
         setSensors(CONTEXTS.warm_rainy, ["outside","sweather"]);
         addMessage("system",
           "The room is 24 °C again — same temperature as before. But look at the sensor bar: it's now raining outside (12 °C). ☔\n\n" +
@@ -733,7 +733,7 @@
 
     function startLightingBlock() {
       wait(800, () => {
-        addBlockDivider("💡 New scenario block — Lighting");
+        addBlockDivider(" New scenario block — Lighting");
         setSensors(CONTEXTS.dim_evening);
         addMessage("system",
           "Now we move on to a different type of situation. The sensor bar has updated — it's now 6:00 PM on a sunny summer evening.\n\n" +
@@ -745,7 +745,7 @@
 
     // SITUATION 6 — first lighting encounter
     function stepLight1() {
-      addLabel("Situation 6 of 9  ·  💡 Lighting", "light");
+      addLabel("Situation 6 of 9  ·   Lighting", "light");
       addMessage("system", "It's 6:00 PM, sunny outside (20 °C). The room feels a bit dim — curtains closed, light off.");
       showButtons([{
         label: 'You say: "It\'s a bit dark in here."',
@@ -783,7 +783,7 @@
     function stepLight2() {
       wait(600, () => {
         setSensors(CONTEXTS.dim_evening2);
-        addLabel("Situation 7 of 9  ·  💡 Lighting", "light");
+        addLabel("Situation 7 of 9  ·   Lighting", "light");
 
         const sameAct = state.preferredLightAction === "curtains" ? "open the curtains" : "turn on the indoor light";
         const altAct  = state.preferredLightAction === "curtains" ? "turn on the indoor light" : "open the curtains";
@@ -845,7 +845,7 @@
     function stepLightProactive() {
       wait(800, () => {
         setSensors(CONTEXTS.dim_evening);
-        addLabel("Situation 8 of 9  ·  💡 Lighting  ·  System acts proactively", "light");
+        addLabel("Situation 8 of 9  ·   Lighting  ·  System acts proactively", "light");
 
         const action  = state.preferredLightAction === "curtains" ? "open the curtains" : "turn on the indoor light";
         const done    = state.preferredLightAction === "curtains" ? "opened the curtains" : "turned on the indoor light";
@@ -925,7 +925,7 @@
     function stepLight3() {
       wait(750, () => {
         setSensors(CONTEXTS.dark_night, ["sweather","soutside"]);
-        addLabel("Situation 9 of 9  ·  💡 Lighting  ·  Context changed", "night");
+        addLabel("Situation 9 of 9  ·   Lighting  ·  Context changed", "night");
         addMessage("system",
           "A few weeks later — same complaint, but look at the sensor bar: it's now 9:30 PM and dark outside. 🌙\n\n" +
           "You've been watching TV and the room feels dark with the light off."
