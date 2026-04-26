@@ -985,47 +985,12 @@
 
     function step5FinalCorrection() {
       wait(700, () => {
-        addBlockDivider("✅ Final check");
+        addBlockDivider("Interaction complete");
         addMessage("system",
-          "You've now seen how I handle two types of recurring situations — room temperature and room lighting.\n\n" +
-          "In both cases, my behaviour was shaped by the configuration I was running. Here's what that means:"
+          "That's the end of the interaction. Thank you for going through the scenarios.\n\n" +
+          "Please continue to the questionnaire — it will ask about your experience with the assistant."
         );
-
-        if (state.condition === "conservative") {
-          addMessage("system",
-            "In my current mode (conservative), I ask you every single time before acting — even in situations I've seen many times before and even when conditions are identical.\n\n" +
-            "For example: \"The room is 24 °C and 17 °C outside. Should I open the window?\" or \"It's 6 PM and sunny. Should I open the curtains?\"\n\n" +
-            "You always make the final decision."
-          );
-        } else if (state.condition === "standard") {
-          const tAct = state.preferredTempAction  === "window"   ? "open the window"    : "turn on the fan";
-          const lAct = state.preferredLightAction === "curtains" ? "open the curtains"  : "turn on the light";
-          addMessage("system",
-            `In my current mode (standard), I suggest what I've learned but still ask before acting.\n\n` +
-            `For example: "Based on your past choices, I'd suggest I ${tAct} — shall I go ahead?" or "I'd suggest I ${lAct} — is that okay?"\n\n` +
-            `I also adapt when conditions change (like switching to the fan when it rains, or the light when it's night). But you always confirm before I act.`
-          );
-        } else {
-          const tAct = state.preferredTempAction  === "window"   ? "open the window"    : "turn on the fan";
-          const lAct = state.preferredLightAction === "curtains" ? "open the curtains"  : "turn on the light";
-          addMessage("system",
-            `In my current mode (aggressive), I act automatically when I'm confident — without asking first.\n\n` +
-            `For example: I would ${tAct} on a warm sunny afternoon without waiting, or ${lAct} in the early evening without prompting. And when the context changes (rain, nighttime), I adapt the action automatically too.\n\n` +
-            `You can always override me, and a correction will lower my confidence so I become more cautious again.`
-          );
-        }
-
-        showButtons([
-          { label: "That feels about right", userText: "That feels about right.", primary: true,
-            onClick: () => { wait(250, () => { addMessage("system", "Thank you — that's helpful to know."); finishStudy(); }); }
-          },
-          { label: "I'd prefer it to always ask me, even in familiar situations", userText: "I'd prefer it to always ask me, even in familiar situations.",
-            onClick: () => { wait(250, () => { addMessage("system", "Understood — thank you."); finishStudy(); }); }
-          },
-          { label: "I'd prefer it to act on its own more, without checking every time", userText: "I'd prefer it to act on its own more, without checking every time.",
-            onClick: () => { wait(250, () => { addMessage("system", "Understood — thank you."); finishStudy(); }); }
-          }
-        ]);
+        finishStudy();
       });
     }
 
