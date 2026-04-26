@@ -174,14 +174,14 @@
     <div class="app">
       <div class="header">
         <h1 class="title">Smart Home Assistant Study</h1>
-        <p class="subtitle">Short interaction study on how a smart-home assistant moves from asking to suggesting to acting on its own.</p>
+        <p class="subtitle">Short interaction study on how a smart home assistant moves from asking to suggesting to acting on its own.</p>
       </div>
       <div class="body">
 
         <div id="introView">
           <div class="start-box">
             <p><strong>Instructions</strong></p>
-            <p>Imagine you have a smart-home assistant that controls your <strong>window</strong>, <strong>ceiling fan</strong>, <strong>curtains</strong>, and <strong>indoor light</strong>. The assistant learns from your repeated choices — over time it may stop asking every time and start acting more on its own.</p>
+            <p>Imagine you have a smart home assistant that controls your <strong>window</strong>, <strong>ceiling fan</strong>, <strong>curtains</strong>, and <strong>indoor light</strong>. The assistant learns from your repeated choices — over time it may stop asking every time and start acting more on its own.</p>
             <p>You will go through <strong>two short scenario blocks</strong>:</p>
             <p>
                <strong>Block 1 — Temperature</strong>: The room feels warm. The assistant can open the window or turn on the fan.<br>
@@ -190,7 +190,7 @@
             <p>In each block you will also see a situation where the assistant acts <strong>on its own</strong> — without you saying anything first — because it has seen the same conditions before. You will be asked whether that felt appropriate.</p>
             <p>The sensor bar at the top always shows what the assistant can see: room conditions, outdoor context, and the current state of each device.</p>
             <button id="startBtn" class="primary" style="margin-top:8px;">Start interaction</button>
-            <div class="small-note">Testing only: <code>?condition=conservative</code>, <code>?condition=standard</code>, or <code>?condition=aggressive</code>.</div>
+            <!-- <div class="small-note">Testing only: <code>?condition=conservative</code>, <code>?condition=standard</code>, or <code>?condition=aggressive</code>.</div> -->
           </div>
         </div>
 
@@ -244,7 +244,7 @@
   <script>
     const CONFIG = {
       tallyBaseUrl: "https://tally.so/r/D4XB5N",
-      debugShowCondition: true,
+      debugShowCondition: false,
       randomizeCondition: true,
       fixedCondition: null
     };
@@ -402,7 +402,7 @@
     }
 
     function introSequence() {
-      addMessage("system", "Hello! I'm your smart-home assistant. I can control your window, ceiling fan, curtains, and indoor light.");
+      addMessage("system", "Hello! I'm your smart home assistant. I can control your window, ceiling fan, curtains, and indoor light.");
       wait(350, () => {
         addMessage("system", "I learn your preferences over time. At first I'll ask what to do. Later I may start suggesting based on what I've learned, and eventually act on my own when I'm confident.");
         wait(400, () => step1Exploration());
