@@ -5,234 +5,287 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Smart Home Assistant Study</title>
   <style>
-    :root {
-      --bg: #f6f7fb;
-      --card: #ffffff;
-      --border: #e4e7ee;
-      --text: #1a1f36;
-      --muted: #5a6475;
-      --system: #e8f0fe;
-      --user: #d9fdd3;
-      --button: #ffffff;
-      --button-hover: #f3f5f9;
-      --primary: #2b6ef3;
-    }
+  :root {
+    --bg: #f3f1ec;
+    --card: #fffdf8;
+    --panel: #f8f6f0;
+    --border: #ded8cc;
+    --text: #1f2933;
+    --muted: #6b7280;
+    --system: #eef3f1;
+    --user: #dfeee8;
+    --primary: #2f5d50;
+    --primary-hover: #264c42;
+    --button: #fffdf8;
+    --button-hover: #f1eee6;
+  }
 
-    * { box-sizing: border-box; }
+  * { box-sizing: border-box; }
 
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-    }
+  body {
+    margin: 0;
+    font-family: Inter, Arial, Helvetica, sans-serif;
+    background:
+      radial-gradient(circle at top left, #e8efe9 0, transparent 35%),
+      var(--bg);
+    color: var(--text);
+  }
 
-    .page {
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
+  .page {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+  }
 
-    .app {
-      width: 100%;
-      max-width: 980px;
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-      overflow: hidden;
-    }
+  .app {
+    width: 100%;
+    max-width: 980px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    box-shadow: 0 24px 60px rgba(31, 41, 51, 0.10);
+    overflow: hidden;
+  }
 
-    .header {
-      padding: 18px 22px;
-      border-bottom: 1px solid var(--border);
-      background: #fbfcff;
-    }
+  .header {
+    padding: 28px 32px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #fffdf8, #f4f1e8);
+  }
 
-    .title { margin: 0; font-size: 20px; }
+  .title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 650;
+    letter-spacing: -0.03em;
+  }
 
-    .subtitle {
-      margin: 6px 0 0;
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.45;
-    }
+  .subtitle {
+    margin: 8px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
 
-    .body { padding: 20px; }
+  .body { padding: 28px; }
 
-    .consent-box, .done-box {
-      background: #f7f8fb;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      line-height: 1.6;
-    }
+  .consent-box, .done-box {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    padding: 28px;
+    line-height: 1.65;
+  }
 
-    .consent-box h2 {
-      margin-top: 0;
-      font-size: 18px;
-    }
+  .consent-box h2 {
+    margin-top: 0;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
 
-    .consent-list {
-      padding-left: 20px;
-    }
+  .consent-list { padding-left: 22px; }
 
-    .sensor-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      border-radius: 14px;
-      padding: 12px 16px;
-      font-size: 13px;
-      margin-bottom: 14px;
-      transition: background 0.4s ease, border-color 0.4s ease;
-    }
+  .sensor-bar {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: 10px;
+    border-radius: 20px;
+    padding: 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--border);
+    background: var(--panel);
+  }
 
-    .sensor-bar.temp-mode  { background: #f0f4f8; border: 1px solid #dde6ee; }
-    .sensor-bar.light-mode { background: #fdf6e3; border: 1px solid #e8d8a0; }
-    .sensor-bar.night-mode { background: #1e1e2e; border: 1px solid #3a3a5c; }
+  .sensor-bar.temp-mode  { background: #f4f7f5; }
+  .sensor-bar.light-mode { background: #fbf3df; }
+  .sensor-bar.night-mode { background: #222531; border-color: #3b4050; }
 
-    .sensor-bar.night-mode .sensor-label   { color: #8888aa; }
-    .sensor-bar.night-mode .sensor-value   { color: #ccccee; }
-    .sensor-bar.night-mode .sensor-divider { background: #3a3a5c; }
+  .sensor-item {
+    background: rgba(255,255,255,0.55);
+    border: 1px solid rgba(222,216,204,0.8);
+    border-radius: 14px;
+    padding: 10px;
+  }
 
-    .sensor-label {
-      color: var(--muted);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 2px;
-    }
+  .sensor-divider { display: none; }
 
-    .sensor-item  { display: flex; flex-direction: column; min-width: 90px; }
-    .sensor-value { font-weight: bold; font-size: 14px; transition: color 0.3s; }
-    .sensor-value.changed { color: #c0392b; }
-    .sensor-divider { width: 1px; background: #dde6ee; align-self: stretch; }
+  .sensor-label {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
 
-    .block-divider {
-      margin: 22px 0 18px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      font-size: 12px;
-      color: var(--muted);
-    }
+  .sensor-value {
+    font-weight: 650;
+    font-size: 14px;
+  }
 
-    .block-divider::before, .block-divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: var(--border);
-    }
+  .sensor-value.changed { color: #a43f3f; }
 
-    .meta {
-      font-size: 12px;
-      color: var(--muted);
-      margin-bottom: 12px;
-      min-height: 16px;
-    }
+  .sensor-bar.night-mode .sensor-item {
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.12);
+  }
 
-    .chat {
-      background: #fff;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      min-height: 420px;
-      max-height: 650px;
-      overflow-y: auto;
-      padding: 14px;
-      scroll-behavior: smooth;
-    }
+  .sensor-bar.night-mode .sensor-label { color: #aeb4c2; }
+  .sensor-bar.night-mode .sensor-value { color: #f4f5f7; }
 
-    .row { display: flex; margin: 10px 0; }
-    .row.system { justify-content: flex-start; }
-    .row.user   { justify-content: flex-end; }
+  .meta {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    min-height: 14px;
+  }
 
-    .bubble {
-      max-width: 84%;
-      padding: 11px 13px;
-      border-radius: 15px;
-      font-size: 14px;
-      line-height: 1.5;
-      white-space: pre-wrap;
-    }
+  .chat {
+    background: #fbfaf6;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+    min-height: 420px;
+    max-height: 650px;
+    overflow-y: auto;
+    padding: 18px;
+    scroll-behavior: smooth;
+  }
 
-    .row.system .bubble { background: var(--system); }
-    .row.user .bubble   { background: var(--user); }
+  .row { display: flex; margin: 12px 0; }
+  .row.system { justify-content: flex-start; }
+  .row.user { justify-content: flex-end; }
 
-    .scenario-box {
-      background: #f7f8fb;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 11px 13px;
-      margin: 10px auto;
-      color: var(--text);
-      font-size: 14px;
-      line-height: 1.5;
-    }
+  .bubble {
+    max-width: 82%;
+    padding: 13px 15px;
+    border-radius: 18px;
+    font-size: 14px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    box-shadow: 0 2px 8px rgba(31,41,51,0.04);
+  }
 
-    .scenario-title {
-      font-size: 12px;
-      font-weight: bold;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-      margin-bottom: 4px;
-    }
+  .row.system .bubble {
+    background: var(--system);
+    border-bottom-left-radius: 6px;
+  }
 
-    .input-area { margin-top: 14px; min-height: 56px; }
+  .row.user .bubble {
+    background: var(--user);
+    border-bottom-right-radius: 6px;
+  }
 
-    .button-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
+  .scenario-box {
+    background: #fffdf8;
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--primary);
+    border-radius: 18px;
+    padding: 14px 16px;
+    margin: 14px auto;
+    font-size: 14px;
+    line-height: 1.55;
+  }
 
-    button {
-      appearance: none;
-      border: 1px solid #cfd6e4;
-      background: var(--button);
-      color: var(--text);
-      border-radius: 12px;
-      padding: 11px 14px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.15s ease, transform 0.05s ease;
-      text-align: left;
-    }
+  .scenario-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 5px;
+  }
 
-    button:hover { background: var(--button-hover); }
-    button:active { transform: translateY(1px); }
+  .block-divider {
+    margin: 26px 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
 
-    .primary {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: white;
-    }
+  .block-divider::before,
+  .block-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
 
-    .footer-note {
-      margin-top: 14px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.45;
-    }
+  .input-area {
+    margin-top: 16px;
+    min-height: 56px;
+  }
 
-    .situation-label {
-      font-size: 12px;
-      font-weight: bold;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      border-radius: 6px;
-      padding: 3px 8px;
-      display: inline-block;
-      margin-bottom: 6px;
-    }
+  .button-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
 
-    .situation-label.temp  { color: #3556a8; background: #eef3ff; }
-    .situation-label.light { color: #7a5500; background: #fff3cd; }
-    .situation-label.night { color: #ccccee; background: #2e2e4e; }
-  </style>
+  button {
+    appearance: none;
+    border: 1px solid var(--border);
+    background: var(--button);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 12px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.05s ease, box-shadow 0.15s ease;
+    text-align: left;
+  }
+
+  button:hover {
+    background: var(--button-hover);
+    box-shadow: 0 4px 12px rgba(31,41,51,0.08);
+  }
+
+  button:active { transform: translateY(1px); }
+
+  .primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+
+  .primary:hover {
+    background: var(--primary-hover);
+  }
+
+  .footer-note {
+    margin-top: 14px;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .situation-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-radius: 999px;
+    padding: 5px 10px;
+    display: inline-block;
+    margin-bottom: 6px;
+  }
+
+  .situation-label.temp  { color: #2f5d50; background: #e4eee9; }
+  .situation-label.light { color: #7a5a17; background: #f7edcf; }
+  .situation-label.night { color: #f1f1f1; background: #303443; }
+
+  @media (max-width: 700px) {
+    .page { padding: 14px; }
+    .body { padding: 18px; }
+    .header { padding: 22px; }
+    .bubble { max-width: 92%; }
+    .consent-box, .done-box { padding: 20px; }
+  }
+</style>
 </head>
 
 <body>
@@ -634,7 +687,7 @@
               } else {
                 state.phaseReached = "preference";
                 state.latestAutonomyLevel = "suggesting";
-                addMessage("system", `Based on your earlier choice, I suggest that I ${sameAct}. Shall I go ahead, or would you prefer to ${altAct} instead?`);
+                addMessage("system", `Based on what you chose earlier in a similar situation, I suggest that I ${sameAct}. Shall I go ahead, or would you prefer to ${altAct} instead?`);
                 showButtons([
                   {
                     label: `Yes, ${sameAct}`,
@@ -721,7 +774,7 @@
               } else {
                 state.phaseReached = "preference";
                 state.latestAutonomyLevel = "suggesting";
-                addMessage("system", `You have chosen this option before. My suggestion is to ${sameAct}. Should I go ahead, or would you prefer to ${altAct}?`);
+                addMessage("system", `In previous similar situations, you chose to ${sameAct}. My suggestion is to ${sameAct} again. Should I go ahead, or would you prefer to ${altAct}?`);
                 showButtons([
                   {
                     label: state.preferredTempAction === "window" ? "Yes, open the window" : "Yes, turn on the fan",
@@ -990,7 +1043,7 @@
                 ]);
               } else {
                 state.latestAutonomyLevel = "suggesting";
-                addMessage("system", `Based on your earlier choice, I suggest that I ${sameAct}. Shall I go ahead, or would you prefer to ${altAct} instead?`);
+                addMessage("system", `Based on what you chose earlier in a similar situation, I suggest that I ${sameAct}. Shall I go ahead, or would you prefer to ${altAct} instead?`);
                 showButtons([
                   {
                     label: `Yes, ${sameAct}`,
