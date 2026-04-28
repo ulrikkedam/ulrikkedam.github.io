@@ -913,7 +913,7 @@
           addMessage("system", `You have asked me to ${prev} in similar situations before, but conditions have changed. What would you like me to do?`);
         } else if (state.condition === "standard") {
           state.latestAutonomyLevel = "suggesting";
-          addMessage("system", `You have previously asked me to ${prev} when the room gets warm. However, because it is raining outside, opening the window may not be suitable.\n\nMy suggestion is to turn on the ceiling fan. Shall I go ahead?`);
+          addMessage("system", `You have previously asked me to ${prev} when the room gets warm. Because it is raining outside, opening the window may not be suitable.\n\nMy suggestion is to turn on the ceiling fan. Shall I go ahead?`);
         } else {
           state.latestAutonomyLevel = "acting";
           addMessage("system", `Normally I would ${prev} based on your previous choice, but it is raining outside.\n\nI have turned on the ceiling fan instead. You can choose another option if you prefer.`);
